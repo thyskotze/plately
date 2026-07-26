@@ -96,7 +96,7 @@ export default function ProfileSheet() {
         {rowBtn(
           <Star size={18} color={COLORS.green} />,
           'Your goals',
-          'Daily calorie & macro targets',
+          'Daily calorie & protein targets',
           openGoals,
         )}
         {rowBtn(

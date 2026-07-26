@@ -85,7 +85,7 @@ export interface Bio {
   goalDir: GoalDir
 }
 
-/** Draft state for the Goals (TDEE) sheet. */
+/** Draft state for the Goals (TDEE) sheet. Targets tracked: calories + protein. */
 export interface GoalsDraft {
   weight: string
   height: string
@@ -93,7 +93,8 @@ export interface GoalsDraft {
   sex: Sex
   activity: Activity
   goal: GoalDir
+  /** editable calorie goal (defaults to the TDEE suggestion) */
+  kcal: string
+  /** editable protein goal in grams */
   p: string
-  c: string
-  f: string
 }

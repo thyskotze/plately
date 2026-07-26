@@ -78,7 +78,7 @@ export default function GoalsSheet() {
         Your goals
       </div>
       <div style={{ font: '500 11.5px Figtree', color: ink(0.5), marginBottom: 16 }}>
-        We suggest targets from your stats — tweak anything.
+        We suggest a calorie target from your stats — set your calorie and protein goals.
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
@@ -155,42 +155,46 @@ export default function GoalsSheet() {
             marginBottom: 12,
           }}
         >
-          <div style={{ font: '600 12px Figtree', color: ink(0.55) }}>Suggested daily target</div>
-          <div style={{ font: '700 22px Space Grotesk', color: COLORS.green }}>
-            {fmt(suggestKcal(gl))}
-            <span style={{ font: '500 11px Figtree', color: ink(0.4) }}> kcal</span>
+          <div style={{ font: '600 12px Figtree', color: ink(0.55) }}>Your targets</div>
+          <div
+            onClick={() => setGl('kcal', String(suggestKcal(gl)))}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 5,
+              background: COLORS.greenTint,
+              border: `1px solid ${COLORS.green}`,
+              borderRadius: 999,
+              padding: '6px 11px',
+              font: '700 10.5px Figtree',
+              color: COLORS.green,
+              cursor: 'pointer',
+            }}
+          >
+            ↻ Recalculate ({fmt(suggestKcal(gl))})
           </div>
         </div>
         <div style={{ display: 'flex', gap: 8 }}>
           <div style={{ flex: 1 }}>
+            <div style={{ font: '600 9.5px Figtree', color: ink(0.55), marginBottom: 4 }}>
+              Calorie goal (kcal)
+            </div>
+            <input
+              value={gl.kcal}
+              onChange={(e) => setGl('kcal', e.target.value)}
+              inputMode="decimal"
+              style={macroInput(COLORS.inputBorder)}
+            />
+          </div>
+          <div style={{ flex: 1 }}>
             <div style={{ font: '600 9.5px Figtree', color: '#E4572E', marginBottom: 4 }}>
-              Protein g
+              Protein goal (g)
             </div>
             <input
               value={gl.p}
               onChange={(e) => setGl('p', e.target.value)}
               inputMode="decimal"
               style={macroInput('#F0DCD5')}
-            />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ font: '600 9.5px Figtree', color: '#EFA23C', marginBottom: 4 }}>
-              Carbs g
-            </div>
-            <input
-              value={gl.c}
-              onChange={(e) => setGl('c', e.target.value)}
-              inputMode="decimal"
-              style={macroInput('#F2E4CB')}
-            />
-          </div>
-          <div style={{ flex: 1 }}>
-            <div style={{ font: '600 9.5px Figtree', color: '#5B8DEF', marginBottom: 4 }}>Fat g</div>
-            <input
-              value={gl.f}
-              onChange={(e) => setGl('f', e.target.value)}
-              inputMode="decimal"
-              style={macroInput('#D8E2F6')}
             />
           </div>
         </div>

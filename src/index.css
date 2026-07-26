@@ -54,6 +54,12 @@ input, textarea { font-family: Figtree, sans-serif; }
     padding: 0 !important;
     box-shadow: none !important;
   }
-  .phone-screen { border-radius: 0 !important; }
+  .phone-screen {
+    border-radius: 0 !important;
+    padding-top: env(safe-area-inset-top) !important;
+  }
   .phone-notch { display: none !important; }
+  /* On a real phone the OS already shows the clock/battery — hide the mock one. */
+  .phone-status { display: none !important; }
+  .app-tabbar { padding-bottom: calc(22px + env(safe-area-inset-bottom)) !important; }
 }

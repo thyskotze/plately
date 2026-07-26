@@ -15,6 +15,16 @@ export const round = (n: number) => Math.round(n)
 export const fmt = (n: number) => Number(n).toLocaleString('en-US')
 export const clamp01 = (v: number) => Math.max(0, Math.min(1, v || 0))
 
+/**
+ * Parse a user-entered number that may use a comma decimal separator
+ * (e.g. "100,8" → 100.8). Returns 0 for anything unparseable.
+ */
+export const toNum = (v: string | number): number => {
+  if (typeof v === 'number') return v
+  const n = parseFloat(String(v).replace(',', '.'))
+  return Number.isFinite(n) ? n : 0
+}
+
 export const foodById = (foods: Food[], id: string) =>
   foods.find((f) => f.id === id)
 
@@ -148,9 +158,9 @@ export const macroLine = (f: Food) =>
  * this honours the `sex` field: male +5, female −161. (README production fix.)
  */
 export function suggestKcal(gl: GoalsDraft): number {
-  const w = +gl.weight || 0
-  const h = +gl.height || 0
-  const a = +gl.age || 0
+  const w = toNum(gl.weight)
+  const h = toNum(gl.height)
+  const a = toNum(gl.age)
   const sexConst = gl.sex === 'female' ? -161 : 5
   const bmr = 10 * w + 6.25 * h - 5 * a + sexConst
   const fac =

@@ -67,6 +67,7 @@ export default function App() {
             }}
           />
           <div
+            className="phone-status"
             style={{
               display: 'flex',
               justifyContent: 'space-between',

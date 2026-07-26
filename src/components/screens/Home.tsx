@@ -1,12 +1,11 @@
 import { useStore } from '../../store'
-import { ink, MACRO } from '../../tokens'
+import { ink } from '../../tokens'
 import { round, fmt, clamp01, dayTotals, eatenTotals, itemMetrics } from '../../lib/calc'
 import { SLOTS } from '../../types'
 import { Flame, Utensils, Plus, Check, ChevronRight, Share } from '../../icons'
 
 const TODAY = 1
 const RING_DASH = 477.5
-const MINI_DASH = 150.8
 
 export default function Home() {
   const foods = useStore((s) => s.foods)
@@ -41,11 +40,9 @@ export default function Home() {
   const calOff = off(t.kcal, goals.kcal, RING_DASH)
   const calPlannedOff = off(planned.kcal, goals.kcal, RING_DASH)
 
-  const macros = [
-    { label: 'Protein', val: round(t.p), plan: round(planned.p), goal: goals.protein, ...MACRO.protein },
-    { label: 'Carbs', val: round(t.c), plan: round(planned.c), goal: goals.carbs, ...MACRO.carbs },
-    { label: 'Fat', val: round(t.f), plan: round(planned.f), goal: goals.fat, ...MACRO.fat },
-  ]
+  const proteinGoal = goals.protein || 0
+  const proteinEatenPct = proteinGoal ? clamp01(t.p / proteinGoal) * 100 : 0
+  const proteinPlannedPct = proteinGoal ? clamp01(planned.p / proteinGoal) * 100 : 0
 
   const pct = goals.kcal ? round((t.kcal / goals.kcal) * 100) : 0
   const showWin = pct >= 80
@@ -161,71 +158,54 @@ export default function Home() {
         </div>
       </div>
 
-      <div
-        style={{
-          display: 'flex',
-          justifyContent: 'space-between',
-          gap: 8,
-          margin: '8px 4px 18px',
-        }}
-      >
-        {macros.map((m) => (
+      <div style={{ margin: '10px 4px 18px' }}>
+        <div
+          style={{
+            display: 'flex',
+            justifyContent: 'space-between',
+            alignItems: 'baseline',
+            marginBottom: 8,
+          }}
+        >
+          <span style={{ font: '600 12px Figtree', color: ink(0.6) }}>Protein</span>
+          <span style={{ font: "700 13px 'Space Grotesk'", color: '#1a1a17' }}>
+            {round(t.p)}
+            <span style={{ font: '500 11px Figtree', color: ink(0.4) }}> / {proteinGoal} g</span>
+          </span>
+        </div>
+        <div
+          style={{
+            position: 'relative',
+            height: 10,
+            background: '#F1E5E0',
+            borderRadius: 99,
+            overflow: 'hidden',
+          }}
+        >
           <div
-            key={m.label}
             style={{
-              flex: 1,
-              display: 'flex',
-              flexDirection: 'column',
-              alignItems: 'center',
-              gap: 6,
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              bottom: 0,
+              width: `${proteinPlannedPct}%`,
+              background: '#E4572E',
+              opacity: 0.25,
+              borderRadius: 99,
             }}
-          >
-            <div style={{ position: 'relative', width: 58, height: 58 }}>
-              <svg width="58" height="58" viewBox="0 0 58 58">
-                <circle cx="29" cy="29" r="24" fill="none" stroke={m.bg} strokeWidth="6" />
-                <circle
-                  cx="29"
-                  cy="29"
-                  r="24"
-                  fill="none"
-                  stroke={m.color}
-                  strokeOpacity={0.25}
-                  strokeWidth="6"
-                  strokeLinecap="round"
-                  strokeDasharray="150.8"
-                  strokeDashoffset={off(m.plan, m.goal, MINI_DASH)}
-                  transform="rotate(-90 29 29)"
-                />
-                <circle
-                  cx="29"
-                  cy="29"
-                  r="24"
-                  fill="none"
-                  stroke={m.color}
-                  strokeWidth="6"
-                  strokeLinecap="round"
-                  strokeDasharray="150.8"
-                  strokeDashoffset={off(m.val, m.goal, MINI_DASH)}
-                  transform="rotate(-90 29 29)"
-                />
-              </svg>
-              <div
-                style={{
-                  position: 'absolute',
-                  inset: 0,
-                  display: 'flex',
-                  alignItems: 'center',
-                  justifyContent: 'center',
-                  font: "700 13px 'Space Grotesk'",
-                  color: '#1a1a17',
-                }}
-              >
-                {m.val}
-              </div>
-            </div>
-            <div style={{ font: '600 11px Figtree', color: ink(0.55) }}>{m.label}</div>
-          </div>
-        ))}
+          />
+          <div
+            style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              bottom: 0,
+              width: `${proteinEatenPct}%`,
+              background: '#E4572E',
+              borderRadius: 99,
+            }}
+          />
+        </div>
       </div>
 
       {showWin && (

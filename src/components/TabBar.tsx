@@ -10,6 +10,7 @@ export default function TabBar() {
 
   return (
     <div
+      className="app-tabbar"
       style={{
         display: 'flex',
         justifyContent: 'space-around',

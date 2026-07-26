@@ -19,7 +19,7 @@ import { isMealPortion } from './types'
 import { SEED_FOODS } from './seed'
 import { SEED_MEALS_LIB } from './seedMeals'
 import { EXTRA_FOODS } from './seedFoodsExtra'
-import { suggestKcal, suggestMacros } from './lib/calc'
+import { suggestKcal, suggestMacros, toNum } from './lib/calc'
 import type { ShareCard } from './lib/share'
 
 const emptyWeek = (): MealsByDay => {
@@ -275,9 +275,8 @@ export const useStore = create<AppState>()(
           sex: data.sex,
           activity: data.activity,
           goal: data.goalDir,
+          kcal: '',
           p: '',
-          c: '',
-          f: '',
         }
         const kcal = suggestKcal(gl)
         const macros = suggestMacros(kcal, data.weight)
@@ -291,7 +290,7 @@ export const useStore = create<AppState>()(
             activity: data.activity,
             goalDir: data.goalDir,
           },
-          goals: { kcal, protein: macros.protein, carbs: macros.carbs, fat: macros.fat },
+          goals: { kcal, protein: macros.protein, carbs: 0, fat: 0 },
           weights: [{ label: 'Start', kg: data.weight }],
           weightGoal: Math.round(data.weight),
           onboarded: true,
@@ -311,9 +310,8 @@ export const useStore = create<AppState>()(
             sex: b.sex,
             activity: b.activity,
             goal: b.goalDir,
+            kcal: String(st.goals.kcal),
             p: String(st.goals.protein),
-            c: String(st.goals.carbs),
-            f: String(st.goals.fat),
           },
         })
       },
@@ -324,15 +322,15 @@ export const useStore = create<AppState>()(
         if (!gl) return
         set({
           goals: {
-            kcal: suggestKcal(gl),
-            protein: +gl.p || 0,
-            carbs: +gl.c || 0,
-            fat: +gl.f || 0,
+            kcal: toNum(gl.kcal) || suggestKcal(gl),
+            protein: toNum(gl.p),
+            carbs: 0,
+            fat: 0,
           },
           bio: {
-            weight: +gl.weight || 0,
-            height: +gl.height || 0,
-            age: +gl.age || 0,
+            weight: toNum(gl.weight),
+            height: toNum(gl.height),
+            age: toNum(gl.age),
             sex: gl.sex,
             activity: gl.activity,
             goalDir: gl.goal,
@@ -506,10 +504,10 @@ export const useStore = create<AppState>()(
         const fields = {
           name: n.name.trim(),
           cat: n.cat,
-          kcal: +n.kcal || 0,
-          p: +n.p || 0,
-          c: +n.c || 0,
-          f: +n.f || 0,
+          kcal: toNum(n.kcal),
+          p: toNum(n.p),
+          c: toNum(n.c),
+          f: toNum(n.f),
         }
 
         // Edit mode: update the existing food in place.
@@ -582,7 +580,7 @@ export const useStore = create<AppState>()(
       setWInput: (v) => set({ wInput: v }),
       addWeight: () => {
         const s = get()
-        const v = parseFloat(s.wInput)
+        const v = toNum(s.wInput)
         if (!v) return
         set({ weights: [...s.weights, { label: 'Today', kg: v }], wInput: '' })
         s.showToast('Weight logged')

@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../store'
 import { COLORS, ink } from '../tokens'
-import { fmt, suggestKcal } from '../lib/calc'
+import { fmt, suggestKcal, suggestMacros, toNum } from '../lib/calc'
 import type { Sex, Activity, GoalDir } from '../types'
 
 export default function Onboarding() {
@@ -9,15 +9,16 @@ export default function Onboarding() {
 
   const [step, setStep] = useState(0)
   const [name, setName] = useState('')
-  const [weight, setWeight] = useState('')
-  const [height, setHeight] = useState('')
-  const [age, setAge] = useState('')
+  // Prefilled so the form is valid by default — user just adjusts.
+  const [weight, setWeight] = useState('70')
+  const [height, setHeight] = useState('170')
+  const [age, setAge] = useState('30')
   const [sex, setSex] = useState<Sex>('male')
   const [activity, setActivity] = useState<Activity>('moderate')
   const [goalDir, setGoalDir] = useState<GoalDir>('maintain')
 
   const STEPS = 3
-  const statsValid = +weight > 0 && +height > 0 && +age > 0
+  const statsValid = toNum(weight) > 0 && toNum(height) > 0 && toNum(age) > 0
   const canNext = step === 0 ? name.trim().length > 0 : step === 1 ? statsValid : true
 
   const suggested = statsValid
@@ -28,18 +29,18 @@ export default function Onboarding() {
         sex,
         activity,
         goal: goalDir,
+        kcal: '',
         p: '',
-        c: '',
-        f: '',
       })
     : 0
+  const proteinTarget = statsValid ? suggestMacros(suggested, toNum(weight)).protein : 0
 
   const finish = () =>
     completeOnboarding({
       name,
-      weight: +weight,
-      height: +height,
-      age: +age,
+      weight: toNum(weight),
+      height: toNum(height),
+      age: toNum(age),
       sex,
       activity,
       goalDir,
@@ -80,18 +81,19 @@ export default function Onboarding() {
 
   return (
     <div
+      className="noscroll"
       style={{
         position: 'absolute',
         inset: 0,
         background: COLORS.appBg,
         zIndex: 100,
-        display: 'flex',
-        flexDirection: 'column',
+        overflowY: 'auto',
+        WebkitOverflowScrolling: 'touch',
         animation: 'fade .25s',
       }}
     >
       {/* header */}
-      <div style={{ padding: '20px 22px 6px', flex: 'none' }}>
+      <div style={{ padding: '20px 22px 6px' }}>
         <div style={{ font: "800 20px 'Bricolage Grotesque'", color: COLORS.green }}>Plately</div>
         <div style={{ display: 'flex', gap: 6, marginTop: 12 }}>
           {Array.from({ length: STEPS }).map((_, i) => (
@@ -108,7 +110,7 @@ export default function Onboarding() {
         </div>
       </div>
 
-      <div className="noscroll" style={{ flex: 1, overflowY: 'auto', padding: '10px 22px 0' }}>
+      <div style={{ padding: '10px 22px 0' }}>
         {step === 0 && (
           <div style={{ animation: 'fade .2s' }}>
             <div style={{ font: "700 24px/1.15 'Bricolage Grotesque'", color: COLORS.ink }}>
@@ -195,16 +197,19 @@ export default function Onboarding() {
                 {fmt(suggested)}
                 <span style={{ font: '600 13px Figtree', color: ink(0.4) }}> kcal</span>
               </div>
-              <div style={{ font: '500 11px Figtree', color: ink(0.5), marginTop: 4 }}>
-                You can fine-tune this anytime from your profile.
+              <div style={{ font: '600 12px Figtree', color: ink(0.6), marginTop: 4 }}>
+                Protein target ~{proteinTarget} g
+              </div>
+              <div style={{ font: '500 11px Figtree', color: ink(0.5), marginTop: 6 }}>
+                You can fine-tune both anytime from your profile.
               </div>
             </div>
           </div>
         )}
       </div>
 
-      {/* footer */}
-      <div style={{ display: 'flex', gap: 10, padding: '12px 22px 26px', flex: 'none' }}>
+      {/* actions — in-flow so they stay reachable above the keyboard */}
+      <div style={{ display: 'flex', gap: 10, padding: '24px 22px 40px' }}>
         {step > 0 && (
           <div
             onClick={() => setStep(step - 1)}
