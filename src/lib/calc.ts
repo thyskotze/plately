@@ -180,6 +180,17 @@ export function suggestMacros(kcal: number, weightKg: number) {
   return { protein, carbs, fat }
 }
 
+/**
+ * Given a calorie goal + protein goal, work out carbs & fat automatically.
+ * Fat is set to ~30% of total calories; carbs take the remainder.
+ */
+export function deriveMacros(kcal: number, protein: number): { carbs: number; fat: number } {
+  const fat = Math.max(0, Math.round((kcal * 0.3) / 9))
+  const carbsKcal = Math.max(0, kcal - protein * 4 - fat * 9)
+  const carbs = Math.round(carbsKcal / 4)
+  return { carbs, fat }
+}
+
 /** Aggregate grams per foodId across the whole week × all slots (food portions only). */
 export function aggregateWeek(
   foods: Food[],

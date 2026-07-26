@@ -1,6 +1,6 @@
 import { useStore } from '../../store'
 import type { Sex, Activity, GoalDir } from '../../types'
-import { fmt, suggestKcal } from '../../lib/calc'
+import { fmt, suggestKcal, deriveMacros, toNum } from '../../lib/calc'
 import { COLORS, ink } from '../../tokens'
 import Sheet from '../Sheet'
 
@@ -12,6 +12,9 @@ export default function GoalsSheet() {
   const closeOverlay = useStore((s) => s.closeOverlay)
 
   if (!show || !gl) return null
+
+  const kcalNow = toNum(gl.kcal) || suggestKcal(gl)
+  const derived = deriveMacros(kcalNow, toNum(gl.p))
 
   const statInput = {
     width: '100%',
@@ -197,6 +200,9 @@ export default function GoalsSheet() {
               style={macroInput('#F0DCD5')}
             />
           </div>
+        </div>
+        <div style={{ font: '500 11px Figtree', color: ink(0.5), marginTop: 12, textAlign: 'center' }}>
+          We work out the rest: ~{derived.carbs} g carbs · ~{derived.fat} g fat
         </div>
       </div>
 

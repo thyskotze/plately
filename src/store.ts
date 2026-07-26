@@ -19,7 +19,7 @@ import { isMealPortion } from './types'
 import { SEED_FOODS } from './seed'
 import { SEED_MEALS_LIB } from './seedMeals'
 import { EXTRA_FOODS } from './seedFoodsExtra'
-import { suggestKcal, suggestMacros, toNum } from './lib/calc'
+import { suggestKcal, suggestMacros, deriveMacros, toNum } from './lib/calc'
 import type { ShareCard } from './lib/share'
 
 const emptyWeek = (): MealsByDay => {
@@ -279,7 +279,8 @@ export const useStore = create<AppState>()(
           p: '',
         }
         const kcal = suggestKcal(gl)
-        const macros = suggestMacros(kcal, data.weight)
+        const protein = suggestMacros(kcal, data.weight).protein
+        const { carbs, fat } = deriveMacros(kcal, protein)
         set({
           name: data.name.trim(),
           bio: {
@@ -290,7 +291,7 @@ export const useStore = create<AppState>()(
             activity: data.activity,
             goalDir: data.goalDir,
           },
-          goals: { kcal, protein: macros.protein, carbs: 0, fat: 0 },
+          goals: { kcal, protein, carbs, fat },
           weights: [{ label: 'Start', kg: data.weight }],
           weightGoal: Math.round(data.weight),
           onboarded: true,
@@ -320,12 +321,15 @@ export const useStore = create<AppState>()(
       saveGoals: () => {
         const gl = get().gl
         if (!gl) return
+        const goalKcal = toNum(gl.kcal) || suggestKcal(gl)
+        const goalProtein = toNum(gl.p)
+        const derived = deriveMacros(goalKcal, goalProtein)
         set({
           goals: {
-            kcal: toNum(gl.kcal) || suggestKcal(gl),
-            protein: toNum(gl.p),
-            carbs: 0,
-            fat: 0,
+            kcal: goalKcal,
+            protein: goalProtein,
+            carbs: derived.carbs,
+            fat: derived.fat,
           },
           bio: {
             weight: toNum(gl.weight),

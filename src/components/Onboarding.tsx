@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../store'
 import { COLORS, ink } from '../tokens'
-import { fmt, suggestKcal, suggestMacros, toNum } from '../lib/calc'
+import { fmt, suggestKcal, suggestMacros, deriveMacros, toNum } from '../lib/calc'
 import type { Sex, Activity, GoalDir } from '../types'
 
 export default function Onboarding() {
@@ -34,6 +34,7 @@ export default function Onboarding() {
       })
     : 0
   const proteinTarget = statsValid ? suggestMacros(suggested, toNum(weight)).protein : 0
+  const derived = statsValid ? deriveMacros(suggested, proteinTarget) : { carbs: 0, fat: 0 }
 
   const finish = () =>
     completeOnboarding({
@@ -200,8 +201,11 @@ export default function Onboarding() {
               <div style={{ font: '600 12px Figtree', color: ink(0.6), marginTop: 4 }}>
                 Protein target ~{proteinTarget} g
               </div>
+              <div style={{ font: '500 11px Figtree', color: ink(0.5), marginTop: 2 }}>
+                ~{derived.carbs} g carbs · ~{derived.fat} g fat (auto)
+              </div>
               <div style={{ font: '500 11px Figtree', color: ink(0.5), marginTop: 6 }}>
-                You can fine-tune both anytime from your profile.
+                You can fine-tune your calories and protein anytime.
               </div>
             </div>
           </div>
