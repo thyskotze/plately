@@ -174,3 +174,10 @@ export const Share = ({ size = 15, color = '#fff', strokeWidth = 2.2 }: IconProp
     <path d="M8.6 13.5l6.8 4M15.4 6.5l-6.8 4" />
   </svg>
 )
+
+export const Refresh = ({ size = 18, color = '#2E9E5B', strokeWidth = 2.2 }: IconProps) => (
+  <svg {...base(size, color, strokeWidth, 'none')}>
+    <path d="M21 12a9 9 0 1 1-2.64-6.36" />
+    <path d="M21 3v6h-6" />
+  </svg>
+)

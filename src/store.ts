@@ -44,6 +44,7 @@ export type Overlay =
   | 'mealamount'
   | 'mealdetail'
   | 'cnfsearch'
+  | 'barcode'
 
 export interface NewFoodDraft {
   name: string
@@ -181,6 +182,8 @@ export interface AppState extends PersistState, EphemeralState {
   // CNF (Canadian Nutrient File) live search
   openCnfSearch: () => void
   addImportedFood: (food: Food) => void
+  // barcode scanning
+  openBarcodeScan: () => void
   // ai import
   openAiImport: () => void
   aiNext: () => void
@@ -568,6 +571,7 @@ export const useStore = create<AppState>()(
       openInfo: (kind) => set({ overlay: 'info', info: INFO_MAP[kind] }),
 
       openCnfSearch: () => set({ overlay: 'cnfsearch' }),
+      openBarcodeScan: () => set({ overlay: 'barcode' }),
       addImportedFood: (food) => {
         const s = get()
         // Dedupe by id so re-adding the same CNF food doesn't pile up.

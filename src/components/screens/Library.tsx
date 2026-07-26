@@ -12,8 +12,8 @@ export default function Library() {
   const openNewFood = useStore((s) => s.openNewFood)
   const openEditFood = useStore((s) => s.openEditFood)
   const openMealDetail = useStore((s) => s.openMealDetail)
-  const openInfo = useStore((s) => s.openInfo)
   const openCnfSearch = useStore((s) => s.openCnfSearch)
+  const openBarcodeScan = useStore((s) => s.openBarcodeScan)
   const setSearch = useStore((s) => s.setSearch)
 
   const [tab, setTab] = useState<'foods' | 'meals'>('foods')
@@ -155,13 +155,13 @@ export default function Library() {
           </div>
 
           <div style={{ display: 'flex', gap: 7, marginBottom: 16 }}>
-            <div onClick={() => openInfo('barcode')} style={chipStyle}>
+            <div onClick={openBarcodeScan} style={chipStyle}>
               <Barcode />
               <span style={chipLabel}>Scan barcode</span>
             </div>
             <div onClick={openCnfSearch} style={chipStyle}>
               <Grid />
-              <span style={chipLabel}>CNF search</span>
+              <span style={chipLabel}>Food search</span>
             </div>
             <div onClick={openNewFood} style={chipStyle}>
               <Pencil />

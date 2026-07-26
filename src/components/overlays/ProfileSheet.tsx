@@ -2,7 +2,26 @@ import { useRef, useState } from 'react'
 import { useStore } from '../../store'
 import { COLORS, ink } from '../../tokens'
 import Sheet, { CloseButton } from '../Sheet'
-import { Download, Upload, Star } from '../../icons'
+import { Download, Upload, Star, Refresh } from '../../icons'
+
+// Force-fetch the latest deployed version. Clears the service-worker cache and
+// reloads — keeps localStorage, so no user data is lost. Useful for the
+// installed (home-screen) PWA where pull-to-refresh isn't available.
+async function forceUpdate() {
+  try {
+    if ('serviceWorker' in navigator) {
+      const regs = await navigator.serviceWorker.getRegistrations()
+      await Promise.all(regs.map((r) => r.unregister()))
+    }
+    if (window.caches) {
+      const keys = await caches.keys()
+      await Promise.all(keys.map((k) => caches.delete(k)))
+    }
+  } catch {
+    /* best effort */
+  }
+  window.location.reload()
+}
 
 export default function ProfileSheet() {
   const show = useStore((s) => s.overlay === 'profile')
@@ -119,6 +138,12 @@ export default function ProfileSheet() {
             reopenIntro()
             close()
           },
+        )}
+        {rowBtn(
+          <Refresh size={18} color={COLORS.green} />,
+          'Check for updates',
+          'Fetch the latest version of the app (your data is kept).',
+          forceUpdate,
         )}
       </div>
 

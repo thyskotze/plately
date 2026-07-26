@@ -18,6 +18,7 @@ import GoalsSheet from './components/overlays/GoalsSheet'
 import ProfileSheet from './components/overlays/ProfileSheet'
 import ShareSheet from './components/overlays/ShareSheet'
 import CnfSearchSheet from './components/overlays/CnfSearchSheet'
+import BarcodeSheet from './components/overlays/BarcodeSheet'
 import InfoModal from './components/overlays/InfoModal'
 import Toast from './components/overlays/Toast'
 
@@ -104,6 +105,7 @@ export default function App() {
           <ProfileSheet />
           <ShareSheet />
           <CnfSearchSheet />
+          <BarcodeSheet />
           <InfoModal />
           <Toast />
 
