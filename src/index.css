@@ -1,0 +1,59 @@
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  background: #efece5;
+  font-family: Figtree, system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+}
+
+a { color: #2E9E5B; }
+a:hover { color: #237a46; }
+
+input, textarea { font-family: Figtree, sans-serif; }
+
+.noscroll::-webkit-scrollbar { display: none; }
+.noscroll { scrollbar-width: none; }
+
+@keyframes pop {
+  0% { transform: scale(.8); opacity: 0; }
+  60% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes slideup {
+  from { transform: translateY(100%); }
+  to { transform: translateY(0); }
+}
+@keyframes fade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+@keyframes toastin {
+  0% { transform: translate(-50%, 20px); opacity: 0; }
+  15% { transform: translate(-50%, 0); opacity: 1; }
+  85% { transform: translate(-50%, 0); opacity: 1; }
+  100% { transform: translate(-50%, -6px); opacity: 0; }
+}
+
+/* The device canvas. On real phones the phone frame fills the screen. */
+.app-canvas {
+  min-height: 100vh;
+  min-height: 100dvh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 34px 16px;
+}
+
+@media (max-width: 400px) {
+  .app-canvas { padding: 0; }
+  .phone-frame {
+    width: 100vw !important;
+    height: 100dvh !important;
+    border-radius: 0 !important;
+    padding: 0 !important;
+    box-shadow: none !important;
+  }
+  .phone-screen { border-radius: 0 !important; }
+  .phone-notch { display: none !important; }
+}

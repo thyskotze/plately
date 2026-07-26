@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="512" height="512" viewBox="0 0 512 512">
+  <rect width="512" height="512" rx="112" fill="#2E9E5B"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#FBF9F3" stroke-width="30" opacity="0.35"/>
+  <circle cx="256" cy="256" r="150" fill="none" stroke="#FBF9F3" stroke-width="30" stroke-linecap="round"
+          stroke-dasharray="942" stroke-dashoffset="300" transform="rotate(-90 256 256)"/>
+  <text x="256" y="300" text-anchor="middle" font-family="'Bricolage Grotesque', system-ui, sans-serif"
+        font-size="150" font-weight="800" fill="#FBF9F3">P</text>
+</svg>
