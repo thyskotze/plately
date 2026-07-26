@@ -43,6 +43,7 @@ export type Overlay =
   | 'share'
   | 'mealamount'
   | 'mealdetail'
+  | 'cnfsearch'
 
 export interface NewFoodDraft {
   name: string
@@ -177,6 +178,9 @@ export interface AppState extends PersistState, EphemeralState {
   deleteFood: () => void
   // info stubs
   openInfo: (kind: 'barcode' | 'usda') => void
+  // CNF (Canadian Nutrient File) live search
+  openCnfSearch: () => void
+  addImportedFood: (food: Food) => void
   // ai import
   openAiImport: () => void
   aiNext: () => void
@@ -562,6 +566,15 @@ export const useStore = create<AppState>()(
       },
 
       openInfo: (kind) => set({ overlay: 'info', info: INFO_MAP[kind] }),
+
+      openCnfSearch: () => set({ overlay: 'cnfsearch' }),
+      addImportedFood: (food) => {
+        const s = get()
+        // Dedupe by id so re-adding the same CNF food doesn't pile up.
+        const foods = [food, ...s.foods.filter((f) => f.id !== food.id)]
+        set({ foods })
+        s.showToast(`${food.name} added to library`)
+      },
 
       openAiImport: () => set({ overlay: 'aiimport', aiStep: 'prompt', aiText: '' }),
       aiNext: () => set({ aiStep: 'paste' }),
