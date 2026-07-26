@@ -75,6 +75,16 @@ export type Sex = 'male' | 'female'
 export type Activity = 'sedentary' | 'light' | 'moderate' | 'active'
 export type GoalDir = 'cut' | 'maintain' | 'gain'
 
+/** The user's stored body stats + goal direction (drives TDEE + prefills Goals). */
+export interface Bio {
+  weight: number
+  height: number
+  age: number
+  sex: Sex
+  activity: Activity
+  goalDir: GoalDir
+}
+
 /** Draft state for the Goals (TDEE) sheet. */
 export interface GoalsDraft {
   weight: string

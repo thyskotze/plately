@@ -2,6 +2,7 @@ import { useStore } from './store'
 import { COLORS } from './tokens'
 import TabBar from './components/TabBar'
 import Intro from './components/Intro'
+import Onboarding from './components/Onboarding'
 import Home from './components/screens/Home'
 import Planner from './components/screens/Planner'
 import Shopping from './components/screens/Shopping'
@@ -22,6 +23,7 @@ import Toast from './components/overlays/Toast'
 export default function App() {
   const screen = useStore((s) => s.screen)
   const seenIntro = useStore((s) => s.seenIntro)
+  const onboarded = useStore((s) => s.onboarded)
 
   return (
     <div className="app-canvas">
@@ -102,7 +104,7 @@ export default function App() {
           <InfoModal />
           <Toast />
 
-          {!seenIntro && <Intro />}
+          {!onboarded ? <Onboarding /> : !seenIntro && <Intro />}
         </div>
       </div>
     </div>

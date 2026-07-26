@@ -4,18 +4,31 @@ import type {
   Food,
   Meal,
   MealsByDay,
+  DayMeals,
   Goals,
   WeightEntry,
   GoalsDraft,
+  Bio,
+  Sex,
+  Activity,
+  GoalDir,
   SlotKey,
   Category,
 } from './types'
 import { isMealPortion } from './types'
-import { SEED_FOODS, SEED_MEALS, SEED_WEIGHTS } from './seed'
+import { SEED_FOODS } from './seed'
 import { SEED_MEALS_LIB } from './seedMeals'
 import { EXTRA_FOODS } from './seedFoodsExtra'
-import { suggestKcal } from './lib/calc'
+import { suggestKcal, suggestMacros } from './lib/calc'
 import type { ShareCard } from './lib/share'
+
+const emptyWeek = (): MealsByDay => {
+  const w: MealsByDay = {}
+  for (let i = 0; i < 7; i++) {
+    w[i] = { breakfast: [], lunch: [], dinner: [], snacks: [] } as DayMeals
+  }
+  return w
+}
 
 export type Screen = 'home' | 'plan' | 'shopping' | 'stats' | 'library'
 export type Overlay =
@@ -47,6 +60,12 @@ export interface InfoContent {
 
 /** The persisted, serialisable slice — this shape is also the backup JSON. */
 export interface PersistState {
+  /** The user's display name (empty until onboarding). */
+  name: string
+  /** Whether first-run setup has been completed. */
+  onboarded: boolean
+  /** Body stats + goal direction. */
+  bio: Bio
   foods: Food[]
   /** Saved meals / recipes library. */
   meals: Meal[]
@@ -106,6 +125,16 @@ export interface AppState extends PersistState, EphemeralState {
   // navigation
   nav: (s: Screen) => void
   closeOverlay: () => void
+  // onboarding
+  completeOnboarding: (data: {
+    name: string
+    weight: number
+    height: number
+    age: number
+    sex: Sex
+    activity: Activity
+    goalDir: GoalDir
+  }) => void
   // profile
   openProfile: () => void
   // achievement sharing
@@ -168,15 +197,18 @@ export interface AppState extends PersistState, EphemeralState {
 }
 
 const initialPersist: PersistState = {
+  name: '',
+  onboarded: false,
+  bio: { weight: 70, height: 170, age: 30, sex: 'male', activity: 'moderate', goalDir: 'maintain' },
   foods: [...SEED_FOODS, ...EXTRA_FOODS],
   meals: SEED_MEALS_LIB,
-  mealsByDay: SEED_MEALS,
-  goals: { kcal: 2150, protein: 150, carbs: 215, fat: 70 },
-  weights: SEED_WEIGHTS,
-  weightGoal: 74.0,
-  streak: 12,
-  level: 4,
-  xp: 320,
+  mealsByDay: emptyWeek(),
+  goals: { kcal: 2000, protein: 140, carbs: 200, fat: 65 },
+  weights: [],
+  weightGoal: 0,
+  streak: 0,
+  level: 1,
+  xp: 0,
   xpMax: 500,
   shopChecked: {},
   eaten: {},
@@ -234,18 +266,51 @@ export const useStore = create<AppState>()(
 
       openProfile: () => set({ overlay: 'profile' }),
       openShare: (card) => set({ overlay: 'share', shareData: card }),
+
+      completeOnboarding: (data) => {
+        const gl: GoalsDraft = {
+          weight: String(data.weight),
+          height: String(data.height),
+          age: String(data.age),
+          sex: data.sex,
+          activity: data.activity,
+          goal: data.goalDir,
+          p: '',
+          c: '',
+          f: '',
+        }
+        const kcal = suggestKcal(gl)
+        const macros = suggestMacros(kcal, data.weight)
+        set({
+          name: data.name.trim(),
+          bio: {
+            weight: data.weight,
+            height: data.height,
+            age: data.age,
+            sex: data.sex,
+            activity: data.activity,
+            goalDir: data.goalDir,
+          },
+          goals: { kcal, protein: macros.protein, carbs: macros.carbs, fat: macros.fat },
+          weights: [{ label: 'Start', kg: data.weight }],
+          weightGoal: Math.round(data.weight),
+          onboarded: true,
+          seenIntro: true,
+        })
+      },
+
       openGoals: () => {
         const st = get()
-        const w = st.weights[st.weights.length - 1].kg
+        const b = st.bio
         set({
           overlay: 'goals',
           gl: {
-            weight: String(w),
-            height: '178',
-            age: '32',
-            sex: 'male',
-            activity: 'moderate',
-            goal: 'maintain',
+            weight: String(b.weight),
+            height: String(b.height),
+            age: String(b.age),
+            sex: b.sex,
+            activity: b.activity,
+            goal: b.goalDir,
             p: String(st.goals.protein),
             c: String(st.goals.carbs),
             f: String(st.goals.fat),
@@ -263,6 +328,14 @@ export const useStore = create<AppState>()(
             protein: +gl.p || 0,
             carbs: +gl.c || 0,
             fat: +gl.f || 0,
+          },
+          bio: {
+            weight: +gl.weight || 0,
+            height: +gl.height || 0,
+            age: +gl.age || 0,
+            sex: gl.sex,
+            activity: gl.activity,
+            goalDir: gl.goal,
           },
           overlay: 'none',
         })
@@ -526,6 +599,9 @@ export const useStore = create<AppState>()(
       exportBackup: () => {
         const s = get()
         const backup: PersistState = {
+          name: s.name,
+          onboarded: s.onboarded,
+          bio: s.bio,
           foods: s.foods,
           meals: s.meals,
           mealsByDay: s.mealsByDay,
@@ -587,6 +663,9 @@ export const useStore = create<AppState>()(
       name: 'plately-v1',
       // Only persist the data slice; UI/ephemeral state is not saved.
       partialize: (s): PersistState => ({
+        name: s.name,
+        onboarded: s.onboarded,
+        bio: s.bio,
         foods: s.foods,
         meals: s.meals,
         mealsByDay: s.mealsByDay,

@@ -15,11 +15,22 @@ export default function Home() {
   const goals = useStore((s) => s.goals)
   const streak = useStore((s) => s.streak)
   const eaten = useStore((s) => s.eaten)
+  const name = useStore((s) => s.name)
   const openProfile = useStore((s) => s.openProfile)
   const openPick = useStore((s) => s.openPick)
   const openEditItem = useStore((s) => s.openEditItem)
   const toggleEaten = useStore((s) => s.toggleEaten)
   const openShare = useStore((s) => s.openShare)
+
+  const firstName = name.trim().split(' ')[0] || 'there'
+  const initial = (name.trim()[0] || 'P').toUpperCase()
+  const hr = new Date().getHours()
+  const partOfDay = hr < 12 ? 'morning' : hr < 18 ? 'afternoon' : 'evening'
+  const dateLabel = new Date().toLocaleDateString(undefined, {
+    weekday: 'long',
+    month: 'short',
+    day: 'numeric',
+  })
 
   const eatenToday = eaten[TODAY]
   const planned = dayTotals(foods, meals, mealsByDay[TODAY]) // everything laid out today
@@ -49,7 +60,7 @@ export default function Home() {
       eatenKcal: t.kcal,
       goalKcal: goals.kcal,
       streak,
-      dateLabel: 'Tuesday, Jul 28',
+      dateLabel,
       headline: win.headline,
       sub: win.sub,
     })
@@ -65,9 +76,7 @@ export default function Home() {
         }}
       >
         <div>
-          <div style={{ font: '400 12.5px Figtree', color: ink(0.5) }}>
-            Tuesday, Jul 28
-          </div>
+          <div style={{ font: '400 12.5px Figtree', color: ink(0.5) }}>{dateLabel}</div>
           <div
             style={{
               font: "700 22px/1.1 'Bricolage Grotesque',sans-serif",
@@ -75,7 +84,7 @@ export default function Home() {
               marginTop: 2,
             }}
           >
-            Good morning, Sam
+            Good {partOfDay}, {firstName}
           </div>
         </div>
         <div
@@ -93,7 +102,7 @@ export default function Home() {
             cursor: 'pointer',
           }}
         >
-          S
+          {initial}
         </div>
       </div>
 

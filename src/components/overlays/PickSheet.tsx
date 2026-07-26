@@ -150,6 +150,9 @@ export default function PickSheet() {
                   <div style={{ font: '500 10px Figtree', color: ink(0.45) }}>
                     {round(m.p)}P {round(m.c)}C {round(m.f)}F · {m.section}
                   </div>
+                  {m.source && (
+                    <div style={{ font: '600 9px Figtree', color: COLORS.green }}>by Coached by Vicks</div>
+                  )}
                 </div>
                 <div style={{ font: '700 12px Space Grotesk', color: ink(0.6) }}>{m.kcal}</div>
               </div>

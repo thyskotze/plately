@@ -204,8 +204,27 @@ export default function Library() {
         </>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-          <div style={{ font: '500 11px Figtree', color: ink(0.5), margin: '2px 2px 4px' }}>
-            Recipes from your coach — tap to view and add to a day.
+          <div
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 8,
+              background: COLORS.greenTint,
+              border: '1px solid #CDE6D6',
+              borderRadius: 12,
+              padding: '9px 12px',
+              margin: '2px 0 10px',
+            }}
+          >
+            <span style={{ fontSize: 15 }}>🥗</span>
+            <div style={{ flex: 1 }}>
+              <div style={{ font: '700 11.5px Figtree', color: COLORS.ink }}>
+                Recipes by Coach Vicky
+              </div>
+              <div style={{ font: '500 10px Figtree', color: ink(0.55) }}>
+                Coached by Vicks · BTC 2026 menu
+              </div>
+            </div>
           </div>
           {filteredMeals.map((m) => (
             <div key={m.id} onClick={() => openMealDetail(m.id)} style={cardStyle}>
@@ -231,6 +250,11 @@ export default function Library() {
                 <div style={{ font: '500 10.5px Figtree', color: ink(0.45), textTransform: 'capitalize' }}>
                   {m.section} · {round(m.p)}P {round(m.c)}C {round(m.f)}F
                 </div>
+                {m.source && (
+                  <div style={{ font: '600 9.5px Figtree', color: COLORS.green, marginTop: 1 }}>
+                    by Coached by Vicks
+                  </div>
+                )}
               </div>
               <div style={{ textAlign: 'right' }}>
                 <div style={{ font: "700 13px 'Space Grotesk'", color: '#1a1a17' }}>{m.kcal}</div>
