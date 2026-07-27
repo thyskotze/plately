@@ -1,4 +1,4 @@
-import type { Food, MealsByDay, WeightEntry, Portion, SlotKey } from './types'
+import type { Food, WeightEntry } from './types'
 
 const F = (
   id: string,
@@ -37,66 +37,6 @@ export const SEED_FOODS: Food[] = [
   F('cottage', 'Cottage cheese', 'Dairy & Eggs', 98, 11, 3.4, 4.3),
 ]
 
-const S = (pairs: [string, number][]): Portion[] =>
-  pairs.map(([foodId, grams]) => ({ foodId, grams }))
-
-const mk = (
-  b: [string, number][],
-  l: [string, number][],
-  d: [string, number][],
-  s: [string, number][],
-): Record<SlotKey, Portion[]> => ({
-  breakfast: S(b),
-  lunch: S(l),
-  dinner: S(d),
-  snacks: S(s),
-})
-
-export const SEED_MEALS: MealsByDay = {
-  0: mk(
-    [['oats', 50], ['banana', 110]],
-    [['chicken', 150], ['rice', 180], ['broccoli', 90]],
-    [['salmon', 140], ['sweetpotato', 160]],
-    [['greek-yogurt', 150]],
-  ),
-  1: mk(
-    [['oats', 50], ['banana', 110]],
-    [['chicken', 150], ['rice', 180], ['broccoli', 90]],
-    [],
-    [['greek-yogurt', 150], ['almonds', 20]],
-  ),
-  2: mk(
-    [['egg', 100], ['bread', 80]],
-    [['tofu', 150], ['quinoa', 180], ['spinach', 60]],
-    [['beef', 150], ['pasta', 200]],
-    [['apple', 150]],
-  ),
-  3: mk(
-    [['greek-yogurt', 170], ['blueberries', 80]],
-    [['salmon', 150], ['broccoli', 120]],
-    [['chicken', 160], ['sweetpotato', 180]],
-    [['cottage', 120]],
-  ),
-  4: mk(
-    [['oats', 60], ['pb', 20]],
-    [['beef', 150], ['rice', 180]],
-    [['tofu', 180], ['broccoli', 100]],
-    [['banana', 120]],
-  ),
-  5: mk(
-    [['egg', 100], ['avocado', 70], ['bread', 60]],
-    [['chicken', 160], ['quinoa', 180]],
-    [['salmon', 150], ['spinach', 80]],
-    [['apple', 150]],
-  ),
-  6: mk(
-    [['greek-yogurt', 170], ['almonds', 20]],
-    [['pasta', 220], ['cheddar', 40]],
-    [['beef', 150], ['sweetpotato', 170]],
-    [['blueberries', 100]],
-  ),
-}
-
 export const SEED_WEIGHTS: WeightEntry[] = [
   { label: 'Jun 30', kg: 78.9 },
   { label: 'Jul 7', kg: 78.3 },
@@ -104,16 +44,6 @@ export const SEED_WEIGHTS: WeightEntry[] = [
   { label: 'Jul 18', kg: 77.5 },
   { label: 'Jul 22', kg: 77.1 },
   { label: 'Jul 25', kg: 76.8 },
-]
-
-export const DAYS = [
-  { i: 0, dow: 'Mon', date: '27', full: 'Monday' },
-  { i: 1, dow: 'Tue', date: '28', full: 'Tuesday' },
-  { i: 2, dow: 'Wed', date: '29', full: 'Wednesday' },
-  { i: 3, dow: 'Thu', date: '30', full: 'Thursday' },
-  { i: 4, dow: 'Fri', date: '31', full: 'Friday' },
-  { i: 5, dow: 'Sat', date: '1', full: 'Saturday' },
-  { i: 6, dow: 'Sun', date: '2', full: 'Sunday' },
 ]
 
 export const AI_PROMPT = `You are helping me fill a meal-planning app's food library.

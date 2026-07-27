@@ -1,6 +1,7 @@
 import { useStore } from '../../store'
 import { ink, CAT_COLORS } from '../../tokens'
 import { foodById, aggregateWeek, qtyLabel, weekMealIngredients } from '../../lib/calc'
+import { weekDates, startOfWeek } from '../../lib/dates'
 import { CATEGORIES } from '../../types'
 import { ChevronLeft, Check } from '../../icons'
 
@@ -8,14 +9,16 @@ export default function Shopping() {
   const foods = useStore((s) => s.foods)
   const meals = useStore((s) => s.meals)
   const mealsByDay = useStore((s) => s.mealsByDay)
+  const selDate = useStore((s) => s.selDate)
   const shopChecked = useStore((s) => s.shopChecked)
   const nav = useStore((s) => s.nav)
   const toggleShop = useStore((s) => s.toggleShop)
 
-  const agg = aggregateWeek(foods, mealsByDay)
+  const week = weekDates(startOfWeek(selDate))
+  const agg = aggregateWeek(foods, mealsByDay, week)
   const ids = Object.keys(agg)
-  // Recipe ingredients from saved meals planned this week (keyed distinctly).
-  const mealIngs = weekMealIngredients(meals, mealsByDay).map((line) => ({
+  // Recipe ingredients from saved meals planned across the selected week.
+  const mealIngs = weekMealIngredients(meals, mealsByDay, week).map((line) => ({
     line,
     key: 'ing:' + line.toLowerCase(),
   }))

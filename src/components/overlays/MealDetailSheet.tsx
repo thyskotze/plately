@@ -3,8 +3,7 @@ import { mealById } from '../../lib/calc'
 import { COLORS, ink, MACRO } from '../../tokens'
 import Sheet, { CloseButton } from '../Sheet'
 import { Pencil } from '../../icons'
-
-const TODAY = 1
+import { todayISO } from '../../lib/dates'
 
 export default function MealDetailSheet() {
   const show = useStore((s) => s.overlay === 'mealdetail' && !!s.chosenMealId)
@@ -118,7 +117,7 @@ export default function MealDetailSheet() {
         {mealSlots.map(({ key, label }) => (
           <div
             key={key}
-            onClick={() => addMeal(TODAY, key, meal.id, 1)}
+            onClick={() => addMeal(todayISO(), key, meal.id, 1)}
             style={{
               flex: '1 0 30%',
               textAlign: 'center',

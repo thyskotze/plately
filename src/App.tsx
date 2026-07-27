@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from './store'
 import { COLORS } from './tokens'
 import TabBar from './components/TabBar'
@@ -32,13 +32,19 @@ export default function App() {
   const seenIntro = useStore((s) => s.seenIntro)
   const onboarded = useStore((s) => s.onboarded)
   const checkForUpdate = useStore((s) => s.checkForUpdate)
+  // Bumped on foreground so screens re-derive todayISO() after a midnight rollover.
+  const [, setDayTick] = useState(0)
 
-  // Notice a newer deployed build: once on load, and whenever the app is
-  // brought back to the foreground (installed PWAs stay open for days).
+  // On load + whenever the app returns to the foreground: check for a newer
+  // deployed build, and re-render so the current date rolls over (installed
+  // PWAs can stay open for days).
   useEffect(() => {
     checkForUpdate()
     const onVisible = () => {
-      if (document.visibilityState === 'visible') checkForUpdate()
+      if (document.visibilityState === 'visible') {
+        checkForUpdate()
+        setDayTick((n) => n + 1)
+      }
     }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)

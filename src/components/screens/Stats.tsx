@@ -1,12 +1,13 @@
 import { useStore } from '../../store'
 import { ink } from '../../tokens'
 import { sparkline, eatenTotals, round } from '../../lib/calc'
+import { computeStreak } from '../../lib/streak'
+import { todayISO } from '../../lib/dates'
 import { Flame, Star, Share } from '../../icons'
 
 export default function Stats() {
   const weights = useStore((s) => s.weights)
   const weightGoal = useStore((s) => s.weightGoal)
-  const streak = useStore((s) => s.streak)
   const level = useStore((s) => s.level)
   const xp = useStore((s) => s.xp)
   const xpMax = useStore((s) => s.xpMax)
@@ -19,6 +20,8 @@ export default function Stats() {
   const eaten = useStore((s) => s.eaten)
   const goals = useStore((s) => s.goals)
   const openShare = useStore((s) => s.openShare)
+
+  const streak = computeStreak(foods, meals, mealsByDay, eaten, goals.kcal, todayISO())
 
   const kgs = weights.map((w) => w.kg)
   const sp = sparkline(kgs)

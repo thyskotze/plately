@@ -182,29 +182,30 @@ export function deriveMacros(kcal: number, protein: number): { carbs: number; fa
   return { carbs, fat }
 }
 
-/** Aggregate grams per foodId across the whole week × all slots (food portions only). */
+/** Aggregate grams per foodId across the given dates × all slots (food portions only). */
 export function aggregateWeek(
   foods: Food[],
   mealsByDay: MealsByDay,
+  dates: string[],
 ): Record<string, number> {
   const agg: Record<string, number> = {}
-  for (let i = 0; i < 7; i++) {
-    allPortions(mealsByDay[i]).forEach((it) => {
+  dates.forEach((date) => {
+    allPortions(mealsByDay[date]).forEach((it) => {
       if (isMealPortion(it)) return
       if (foodById(foods, it.foodId)) {
         agg[it.foodId] = (agg[it.foodId] || 0) + it.grams
       }
     })
-  }
+  })
   return agg
 }
 
-/** Unique recipe-ingredient lines from every saved meal planned this week. */
-export function weekMealIngredients(meals: Meal[], mealsByDay: MealsByDay): string[] {
+/** Unique recipe-ingredient lines from every saved meal planned on the given dates. */
+export function weekMealIngredients(meals: Meal[], mealsByDay: MealsByDay, dates: string[]): string[] {
   const seen = new Set<string>()
   const out: string[] = []
-  for (let i = 0; i < 7; i++) {
-    allPortions(mealsByDay[i]).forEach((it) => {
+  dates.forEach((date) => {
+    allPortions(mealsByDay[date]).forEach((it) => {
       if (!isMealPortion(it)) return
       const m = mealById(meals, it.mealId)
       m?.ingredients.forEach((line) => {
@@ -214,7 +215,7 @@ export function weekMealIngredients(meals: Meal[], mealsByDay: MealsByDay): stri
         out.push(line)
       })
     })
-  }
+  })
   return out
 }
 
