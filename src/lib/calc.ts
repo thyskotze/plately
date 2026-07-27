@@ -8,8 +8,12 @@ import type {
   Category,
   SlotKey,
 } from '../types'
-import { SLOTS, CATEGORIES, isMealPortion } from '../types'
+import { CATEGORIES, isMealPortion } from '../types'
 import { CAT_COLORS } from '../tokens'
+
+/** All portions in a day, across every slot. */
+const allPortions = (day: DayMeals | undefined): Portion[] =>
+  day ? Object.values(day).flat() : []
 
 export const round = (n: number) => Math.round(n)
 export const fmt = (n: number) => Number(n).toLocaleString('en-US')
@@ -111,7 +115,7 @@ export function eatenTotals(
     p = 0,
     c = 0,
     f = 0
-  SLOTS.forEach(({ key }) => {
+  Object.keys(day || {}).forEach((key) => {
     if (!eaten?.[key]) return
     ;(day?.[key] || []).forEach((it) => {
       const m = itemMetrics(foods, meals, it)
@@ -125,20 +129,7 @@ export function eatenTotals(
 }
 
 export function dayTotals(foods: Food[], meals: Meal[], day: DayMeals | undefined): DayTotals {
-  let k = 0,
-    p = 0,
-    c = 0,
-    f = 0
-  SLOTS.forEach(({ key }) => {
-    ;(day?.[key] || []).forEach((it) => {
-      const m = itemMetrics(foods, meals, it)
-      k += m.kcal
-      p += m.p
-      c += m.c
-      f += m.f
-    })
-  })
-  return { kcal: round(k), p: round(p), c: round(c), f: round(f) }
+  return portionsTotals(foods, meals, allPortions(day))
 }
 
 export const tag = (f: Food) => {
@@ -198,13 +189,11 @@ export function aggregateWeek(
 ): Record<string, number> {
   const agg: Record<string, number> = {}
   for (let i = 0; i < 7; i++) {
-    SLOTS.forEach(({ key }) => {
-      ;(mealsByDay[i]?.[key] || []).forEach((it) => {
-        if (isMealPortion(it)) return
-        if (foodById(foods, it.foodId)) {
-          agg[it.foodId] = (agg[it.foodId] || 0) + it.grams
-        }
-      })
+    allPortions(mealsByDay[i]).forEach((it) => {
+      if (isMealPortion(it)) return
+      if (foodById(foods, it.foodId)) {
+        agg[it.foodId] = (agg[it.foodId] || 0) + it.grams
+      }
     })
   }
   return agg
@@ -215,16 +204,14 @@ export function weekMealIngredients(meals: Meal[], mealsByDay: MealsByDay): stri
   const seen = new Set<string>()
   const out: string[] = []
   for (let i = 0; i < 7; i++) {
-    SLOTS.forEach(({ key }) => {
-      ;(mealsByDay[i]?.[key] || []).forEach((it) => {
-        if (!isMealPortion(it)) return
-        const m = mealById(meals, it.mealId)
-        m?.ingredients.forEach((line) => {
-          const norm = line.toLowerCase()
-          if (seen.has(norm)) return
-          seen.add(norm)
-          out.push(line)
-        })
+    allPortions(mealsByDay[i]).forEach((it) => {
+      if (!isMealPortion(it)) return
+      const m = mealById(meals, it.mealId)
+      m?.ingredients.forEach((line) => {
+        const norm = line.toLowerCase()
+        if (seen.has(norm)) return
+        seen.add(norm)
+        out.push(line)
       })
     })
   }

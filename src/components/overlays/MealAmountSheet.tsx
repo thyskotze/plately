@@ -1,5 +1,4 @@
 import { useStore } from '../../store'
-import { SLOTS } from '../../types'
 import { DAYS } from '../../seed'
 import { round, mealById } from '../../lib/calc'
 import { COLORS, ink } from '../../tokens'
@@ -13,6 +12,7 @@ export default function MealAmountSheet() {
   const mVal = useStore((s) => s.mVal)
   const pickSlot = useStore((s) => s.pickSlot)
   const pickDay = useStore((s) => s.pickDay)
+  const mealSlots = useStore((s) => s.mealSlots)
   const mStep = useStore((s) => s.mStep)
   const confirmMeal = useStore((s) => s.confirmMeal)
   const closeOverlay = useStore((s) => s.closeOverlay)
@@ -25,7 +25,8 @@ export default function MealAmountSheet() {
   if (!meal) return null
 
   const pickDest =
-    SLOTS.find((x) => x.key === pickSlot)!.label + (pickDay !== 1 ? ' · ' + DAYS[pickDay].dow : '')
+    (mealSlots.find((x) => x.key === pickSlot)?.label ?? pickSlot) +
+    (pickDay !== 1 ? ' · ' + DAYS[pickDay].dow : '')
 
   const circleBtn = {
     width: 44,

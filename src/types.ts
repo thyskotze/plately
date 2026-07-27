@@ -10,9 +10,16 @@ export const CATEGORIES = [
 
 export type Category = (typeof CATEGORIES)[number]
 
-export type SlotKey = 'breakfast' | 'lunch' | 'dinner' | 'snacks'
+/** A meal slot key — the 4 defaults use stable ids; custom slots get generated ids. */
+export type SlotKey = string
 
-export const SLOTS: { key: SlotKey; label: string }[] = [
+export interface MealSlot {
+  key: SlotKey
+  label: string
+}
+
+/** The starting meal slots; users can add / rename / remove / reorder these. */
+export const DEFAULT_SLOTS: MealSlot[] = [
   { key: 'breakfast', label: 'Breakfast' },
   { key: 'lunch', label: 'Lunch' },
   { key: 'dinner', label: 'Dinner' },

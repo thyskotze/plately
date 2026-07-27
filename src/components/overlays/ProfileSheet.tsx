@@ -2,7 +2,7 @@ import { useRef, useState } from 'react'
 import { useStore } from '../../store'
 import { COLORS, ink } from '../../tokens'
 import Sheet, { CloseButton } from '../Sheet'
-import { Download, Upload, Star, Refresh } from '../../icons'
+import { Download, Upload, Star, Refresh, Utensils } from '../../icons'
 
 // Force-fetch the latest deployed version. Clears the service-worker cache and
 // reloads — keeps localStorage, so no user data is lost. Useful for the
@@ -27,6 +27,7 @@ export default function ProfileSheet() {
   const show = useStore((s) => s.overlay === 'profile')
   const close = useStore((s) => s.closeOverlay)
   const openGoals = useStore((s) => s.openGoals)
+  const openSlots = useStore((s) => s.openSlots)
   const exportBackup = useStore((s) => s.exportBackup)
   const importBackup = useStore((s) => s.importBackup)
   const reopenIntro = useStore((s) => s.reopenIntro)
@@ -117,6 +118,12 @@ export default function ProfileSheet() {
           'Your goals',
           'Daily calorie & protein targets',
           openGoals,
+        )}
+        {rowBtn(
+          <Utensils size={18} color={COLORS.green} />,
+          'Your meals',
+          'Add, rename or reorder your meal slots',
+          openSlots,
         )}
         {rowBtn(
           <Download size={18} color={COLORS.green} />,

@@ -1,13 +1,13 @@
 import { useStore } from '../../store'
 import { ink } from '../../tokens'
 import { fmt, dayTotals, itemMetrics } from '../../lib/calc'
-import { SLOTS } from '../../types'
 import { DAYS } from '../../seed'
 import { Cart, Plus, ChevronRight } from '../../icons'
 
 export default function Planner() {
   const foods = useStore((s) => s.foods)
   const meals = useStore((s) => s.meals)
+  const mealSlots = useStore((s) => s.mealSlots)
   const mealsByDay = useStore((s) => s.mealsByDay)
   const selDay = useStore((s) => s.selDay)
   const goals = useStore((s) => s.goals)
@@ -15,6 +15,7 @@ export default function Planner() {
   const openPick = useStore((s) => s.openPick)
   const openEditItem = useStore((s) => s.openEditItem)
   const selectDay = useStore((s) => s.selectDay)
+  const openSlots = useStore((s) => s.openSlots)
 
   return (
     <div style={{ padding: '6px 22px 24px', animation: 'fade .25s' }}>
@@ -114,8 +115,8 @@ export default function Planner() {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {SLOTS.map(({ key, label }) => {
-          const items = (mealsByDay[selDay][key] || []).map((it, idx) => ({
+        {mealSlots.map(({ key, label }) => {
+          const items = (mealsByDay[selDay]?.[key] || []).map((it, idx) => ({
             ...itemMetrics(foods, meals, it),
             idx,
           }))
@@ -184,6 +185,25 @@ export default function Planner() {
             </div>
           )
         })}
+
+        <div
+          onClick={openSlots}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            padding: '11px 14px',
+            borderRadius: 16,
+            border: '1px dashed #D8D0C0',
+            font: '600 12px Figtree',
+            color: ink(0.5),
+            cursor: 'pointer',
+          }}
+        >
+          <Plus size={14} color={ink(0.5)} />
+          Add or edit meals
+        </div>
       </div>
     </div>
   )

@@ -3,6 +3,7 @@ import { persist } from 'zustand/middleware'
 import type {
   Food,
   Meal,
+  Portion,
   MealsByDay,
   DayMeals,
   Goals,
@@ -13,9 +14,10 @@ import type {
   Activity,
   GoalDir,
   SlotKey,
+  MealSlot,
   Category,
 } from './types'
-import { isMealPortion } from './types'
+import { isMealPortion, DEFAULT_SLOTS } from './types'
 import { SEED_FOODS } from './seed'
 import { SEED_MEALS_LIB } from './seedMeals'
 import { EXTRA_FOODS } from './seedFoodsExtra'
@@ -46,6 +48,7 @@ export type Overlay =
   | 'cnfsearch'
   | 'barcode'
   | 'mealbuilder'
+  | 'slots'
 
 export interface NewFoodDraft {
   name: string
@@ -72,6 +75,8 @@ export interface PersistState {
   foods: Food[]
   /** Saved meals / recipes library. */
   meals: Meal[]
+  /** User-configurable meal slots (Breakfast, Coffee, Snack 2, …). */
+  mealSlots: MealSlot[]
   mealsByDay: MealsByDay
   goals: Goals
   weights: WeightEntry[]
@@ -174,6 +179,12 @@ export interface AppState extends PersistState, EphemeralState {
   toggleShop: (id: string) => void
   // meal check-off
   toggleEaten: (day: number, slot: SlotKey) => void
+  // meal-slot configuration
+  openSlots: () => void
+  addSlot: (label: string) => void
+  renameSlot: (key: SlotKey, label: string) => void
+  removeSlot: (key: SlotKey) => void
+  moveSlot: (key: SlotKey, dir: -1 | 1) => void
   // library / new food
   setSearch: (v: string) => void
   openNewFood: () => void
@@ -213,6 +224,7 @@ const initialPersist: PersistState = {
   bio: { weight: 70, height: 170, age: 30, sex: 'male', activity: 'moderate', goalDir: 'maintain' },
   foods: [...SEED_FOODS, ...EXTRA_FOODS],
   meals: SEED_MEALS_LIB,
+  mealSlots: DEFAULT_SLOTS,
   mealsByDay: emptyWeek(),
   goals: { kcal: 2000, protein: 140, carbs: 200, fat: 65 },
   weights: [],
@@ -357,8 +369,16 @@ export const useStore = create<AppState>()(
 
       openPick: (day, slot) =>
         set({ overlay: 'pick', pickDay: day, pickSlot: slot, pickSearch: '', pickTab: 'foods' }),
-      openQuick: () =>
-        set({ overlay: 'pick', pickDay: 1, pickSlot: 'snacks', pickSearch: '', pickTab: 'foods' }),
+      openQuick: () => {
+        const slots = get().mealSlots
+        set({
+          overlay: 'pick',
+          pickDay: 1,
+          pickSlot: slots[slots.length - 1]?.key || 'snacks',
+          pickSearch: '',
+          pickTab: 'foods',
+        })
+      },
       setPickSearch: (v) => set({ pickSearch: v }),
       setPickTab: (tab) => set({ pickTab: tab }),
       chooseFood: (id) =>
@@ -493,6 +513,51 @@ export const useStore = create<AppState>()(
           return { eaten: { ...s.eaten, [day]: forDay } }
         }),
 
+      openSlots: () => set({ overlay: 'slots' }),
+      addSlot: (label) => {
+        const name = label.trim()
+        if (!name) return
+        set((s) => ({ mealSlots: [...s.mealSlots, { key: 'slot' + Date.now(), label: name }] }))
+      },
+      renameSlot: (key, label) => {
+        const name = label.trim()
+        if (!name) return
+        set((s) => ({
+          mealSlots: s.mealSlots.map((m) => (m.key === key ? { ...m, label: name } : m)),
+        }))
+      },
+      removeSlot: (key) =>
+        set((s) => {
+          if (s.mealSlots.length <= 1) return {} // keep at least one slot
+          // Drop the slot and its logged portions / eaten flags across all days.
+          const mb: MealsByDay = {}
+          for (let i = 0; i < 7; i++) {
+            const d = s.mealsByDay[i]
+            if (!d) continue
+            const nd: MealsByDay[number] = {}
+            Object.keys(d).forEach((k) => {
+              if (k !== key) nd[k] = d[k]
+            })
+            mb[i] = nd
+          }
+          const eaten: typeof s.eaten = {}
+          Object.keys(s.eaten).forEach((di) => {
+            const forDay = { ...s.eaten[+di] }
+            delete forDay[key]
+            eaten[+di] = forDay
+          })
+          return { mealSlots: s.mealSlots.filter((m) => m.key !== key), mealsByDay: mb, eaten }
+        }),
+      moveSlot: (key, dir) =>
+        set((s) => {
+          const arr = [...s.mealSlots]
+          const i = arr.findIndex((m) => m.key === key)
+          const j = i + dir
+          if (i < 0 || j < 0 || j >= arr.length) return {}
+          ;[arr[i], arr[j]] = [arr[j], arr[i]]
+          return { mealSlots: arr }
+        }),
+
       setSearch: (v) => set({ search: v }),
       openNewFood: () =>
         set({
@@ -553,18 +618,16 @@ export const useStore = create<AppState>()(
         if (!id) return
         // Also purge any logged portions that reference this food so the
         // meal/shopping views never point at a missing food.
-        const keep = (p: (typeof s.mealsByDay)[number]['breakfast'][number]) =>
-          isMealPortion(p) || p.foodId !== id
+        const keep = (p: Portion) => isMealPortion(p) || p.foodId !== id
         const mb: MealsByDay = {}
         for (let i = 0; i < 7; i++) {
           const d = s.mealsByDay[i]
           if (!d) continue
-          mb[i] = {
-            breakfast: d.breakfast.filter(keep),
-            lunch: d.lunch.filter(keep),
-            dinner: d.dinner.filter(keep),
-            snacks: d.snacks.filter(keep),
-          }
+          const nd: MealsByDay[number] = {}
+          Object.keys(d).forEach((k) => {
+            nd[k] = d[k].filter(keep)
+          })
+          mb[i] = nd
         }
         const shopChecked = { ...s.shopChecked }
         delete shopChecked[id]
@@ -633,6 +696,7 @@ export const useStore = create<AppState>()(
           bio: s.bio,
           foods: s.foods,
           meals: s.meals,
+          mealSlots: s.mealSlots,
           mealsByDay: s.mealsByDay,
           goals: s.goals,
           weights: s.weights,
@@ -697,6 +761,7 @@ export const useStore = create<AppState>()(
         bio: s.bio,
         foods: s.foods,
         meals: s.meals,
+        mealSlots: s.mealSlots,
         mealsByDay: s.mealsByDay,
         goals: s.goals,
         weights: s.weights,

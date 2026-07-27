@@ -1,5 +1,4 @@
 import { useStore } from '../../store'
-import { SLOTS } from '../../types'
 import { mealById } from '../../lib/calc'
 import { COLORS, ink, MACRO } from '../../tokens'
 import Sheet, { CloseButton } from '../Sheet'
@@ -9,6 +8,7 @@ const TODAY = 1
 export default function MealDetailSheet() {
   const show = useStore((s) => s.overlay === 'mealdetail' && !!s.chosenMealId)
   const meals = useStore((s) => s.meals)
+  const mealSlots = useStore((s) => s.mealSlots)
   const chosenMealId = useStore((s) => s.chosenMealId)
   const addMeal = useStore((s) => s.addMeal)
   const close = useStore((s) => s.closeOverlay)
@@ -87,15 +87,15 @@ export default function MealDetailSheet() {
       <div style={{ font: '700 12px Figtree', color: ink(0.6), marginBottom: 8 }}>
         Add to today
       </div>
-      <div style={{ display: 'flex', gap: 6 }}>
-        {SLOTS.map(({ key, label }) => (
+      <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6 }}>
+        {mealSlots.map(({ key, label }) => (
           <div
             key={key}
             onClick={() => addMeal(TODAY, key, meal.id, 1)}
             style={{
-              flex: 1,
+              flex: '1 0 30%',
               textAlign: 'center',
-              padding: '11px 2px',
+              padding: '11px 6px',
               borderRadius: 12,
               background: COLORS.green,
               font: '700 11px Figtree',

@@ -1,5 +1,4 @@
 import { useStore } from '../../store'
-import { SLOTS } from '../../types'
 import { DAYS } from '../../seed'
 import { round, foodById, toNum } from '../../lib/calc'
 import { COLORS, ink } from '../../tokens'
@@ -13,6 +12,7 @@ export default function GramsSheet() {
   const gVal = useStore((s) => s.gVal)
   const pickSlot = useStore((s) => s.pickSlot)
   const pickDay = useStore((s) => s.pickDay)
+  const mealSlots = useStore((s) => s.mealSlots)
   const gStep = useStore((s) => s.gStep)
   const gSet = useStore((s) => s.gSet)
   const confirmGrams = useStore((s) => s.confirmGrams)
@@ -26,7 +26,7 @@ export default function GramsSheet() {
   if (!food) return null
 
   const pickDest =
-    SLOTS.find((x) => x.key === pickSlot)!.label +
+    (mealSlots.find((x) => x.key === pickSlot)?.label ?? pickSlot) +
     (pickDay !== 1 ? ' · ' + DAYS[pickDay].dow : '')
 
   const chip = (active: boolean) =>

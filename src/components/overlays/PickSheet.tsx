@@ -1,5 +1,4 @@
 import { useStore } from '../../store'
-import { SLOTS } from '../../types'
 import { DAYS } from '../../seed'
 import { tag, macroLine, round } from '../../lib/calc'
 import { COLORS, ink } from '../../tokens'
@@ -10,6 +9,7 @@ export default function PickSheet() {
   const show = useStore((s) => s.overlay === 'pick')
   const foods = useStore((s) => s.foods)
   const meals = useStore((s) => s.meals)
+  const mealSlots = useStore((s) => s.mealSlots)
   const pickSearch = useStore((s) => s.pickSearch)
   const pickSlot = useStore((s) => s.pickSlot)
   const pickDay = useStore((s) => s.pickDay)
@@ -23,7 +23,7 @@ export default function PickSheet() {
   if (!show) return null
 
   const pickDest =
-    SLOTS.find((x) => x.key === pickSlot)!.label +
+    (mealSlots.find((x) => x.key === pickSlot)?.label ?? pickSlot) +
     (pickDay !== 1 ? ' · ' + DAYS[pickDay].dow : '')
 
   const q = pickSearch.toLowerCase()

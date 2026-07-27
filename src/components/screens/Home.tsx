@@ -1,7 +1,6 @@
 import { useStore } from '../../store'
 import { ink, MACRO } from '../../tokens'
 import { round, fmt, clamp01, dayTotals, eatenTotals, itemMetrics } from '../../lib/calc'
-import { SLOTS } from '../../types'
 import { Flame, Utensils, Plus, Check, ChevronRight, Share } from '../../icons'
 
 const TODAY = 1
@@ -11,6 +10,7 @@ const MINI_DASH = 150.8
 export default function Home() {
   const foods = useStore((s) => s.foods)
   const meals = useStore((s) => s.meals)
+  const mealSlots = useStore((s) => s.mealSlots)
   const mealsByDay = useStore((s) => s.mealsByDay)
   const goals = useStore((s) => s.goals)
   const streak = useStore((s) => s.streak)
@@ -21,6 +21,7 @@ export default function Home() {
   const openEditItem = useStore((s) => s.openEditItem)
   const toggleEaten = useStore((s) => s.toggleEaten)
   const openShare = useStore((s) => s.openShare)
+  const openSlots = useStore((s) => s.openSlots)
 
   const firstName = name.trim().split(' ')[0] || 'there'
   const initial = (name.trim()[0] || 'P').toUpperCase()
@@ -323,8 +324,8 @@ export default function Home() {
       </div>
 
       <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {SLOTS.map(({ key, label }) => {
-          const items = (mealsByDay[TODAY][key] || []).map((it, idx) => ({
+        {mealSlots.map(({ key, label }) => {
+          const items = (mealsByDay[TODAY]?.[key] || []).map((it, idx) => ({
             ...itemMetrics(foods, meals, it),
             idx,
           }))
@@ -454,6 +455,25 @@ export default function Home() {
             </div>
           )
         })}
+
+        <div
+          onClick={openSlots}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 6,
+            padding: '11px 14px',
+            borderRadius: 16,
+            border: `1px dashed ${'#D8D0C0'}`,
+            font: '600 12px Figtree',
+            color: ink(0.5),
+            cursor: 'pointer',
+          }}
+        >
+          <Plus size={14} color={ink(0.5)} />
+          Add or edit meals
+        </div>
       </div>
     </div>
   )

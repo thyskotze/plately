@@ -20,6 +20,7 @@ import ShareSheet from './components/overlays/ShareSheet'
 import CnfSearchSheet from './components/overlays/CnfSearchSheet'
 import BarcodeSheet from './components/overlays/BarcodeSheet'
 import MealBuilderSheet from './components/overlays/MealBuilderSheet'
+import MealSlotsSheet from './components/overlays/MealSlotsSheet'
 import InfoModal from './components/overlays/InfoModal'
 import Toast from './components/overlays/Toast'
 
@@ -108,6 +109,7 @@ export default function App() {
           <CnfSearchSheet />
           <BarcodeSheet />
           <MealBuilderSheet />
+          <MealSlotsSheet />
           <InfoModal />
           <Toast />
 
