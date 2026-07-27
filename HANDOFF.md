@@ -48,7 +48,7 @@ src/components/Onboarding.tsx  first-run setup
 - **`exportLibrary()`** writes a shareable `plately-library-*.json` = `{plately:'library', exportedAt, foods, meals:(built only)}` — no personal data. Recipient uses **Import backup → Merge** (unchanged; merges `foods`+`meals` by id). Distinct from the parked share-*by-link* idea.
 - **Meal slots are dynamic:** `mealSlots: {key,label}[]` (defaults breakfast/lunch/dinner/snacks). Days & `eaten` are keyed by slot `key`. Iterate `store.mealSlots` in UI; iterate day keys in calc. Never hardcode the 4 slots.
 - **Goals = calories + protein**; carbs & fat are auto-derived (`deriveMacros`, fat ≈30% of kcal). `bio` stores weight/height/age/sex/activity/goalDir and prefills the Goals sheet.
-- **Home is fixed to `TODAY = 1`** (the "Tuesday" index of a Mon–Sun template week). The header shows the *real* date but the week model is a fixed template — a real calendar/date system is a known v2 candidate.
+- **Real calendar dates.** `mealsByDay` and `eaten` are keyed by **local `YYYY-MM-DD`** strings (`src/lib/dates.ts` — always local, never `toISOString()`). Home reads `todayISO()` and rolls over automatically (App re-renders on foreground). The **Calendar** (`Planner.tsx`) navigates real weeks via ephemeral `selDate` + `shiftWeek`, and both Home and Calendar render the shared `src/components/DaySlots.tsx` (future days hide the eaten check-off). **Streak is computed**, not stored (`src/lib/streak.ts`: consecutive days eaten kcal ≥ 80% of goal, up to today). Persist `version: 1` migrates old integer-keyed data → dates anchored to today (old index 1 → today); `importBackup` remaps old backups the same way. Shopping aggregates the selected week's dates.
 - All number inputs accept comma decimals via `toNum` ("100,8" → 100.8). Keep using it for any new numeric field.
 
 ## External integrations (all CORS-open, called live from the browser)
@@ -66,7 +66,7 @@ src/components/Onboarding.tsx  first-run setup
 - Verify in-browser with the preview tools; to reach a specific app state fast, inject `localStorage['plately-v1'] = JSON.stringify({state:{…}, version:0})` then reload (missing keys fall back to defaults).
 
 ## Ideas parked for v2 (not yet built)
-- Real calendar/dates (today = actual day; history beyond the template week).
+- ~~Real calendar/dates~~ — **done** (v2): local date keys, rollover, history, real-week Calendar, computed streak.
 - Meal-library **share-by-link** (serialize a meal to a URL/JSON to send to a friend) — data model already carries stable ids.
 - Optional Supabase-backed **community "Discover"** meals + a real leaderboard (needs the no-backend decision revisited).
 - USDA real API key; Open Food Facts write-back; per-food category mapping for CNF/USDA/OFF imports (currently 'Other').
