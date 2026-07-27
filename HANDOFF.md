@@ -15,6 +15,8 @@ npm run dev        # local dev (opens at /plately/)
 npm run build      # tsc -b && vite build  → always run before deploy
 ```
 - **Deploy = commit + push to `main`.** GitHub Actions (`.github/workflows/deploy.yml`) builds and publishes to Pages automatically. URL never changes.
+- **Staging repo:** `thyskotze/plately-staging` → https://thyskotze.github.io/plately-staging/ is a throwaway test deploy. `vite.config.ts` derives the base path **and** storage key from `GITHUB_REPOSITORY`, so the same code deployed there uses base `/plately-staging/` + an isolated key `plately-staging` (can't touch live users' `plately-v1` data, even on the same github.io origin). Live repo `plately` → `/plately/` + `plately-v1` automatically.
+- **Promote staging → live:** merge the tested branch into `plately`'s `main` and push to `origin` (the live remote). Same code, live env auto-applies. Test on staging first; never push straight to `origin/main` unverified.
 - After each change I run `npx tsc -b --noEmit` then `npm run build`, then push. tsconfig is strict (`noUnusedLocals`/`noUnusedParameters`) — no dead imports.
 - `vite.config.ts` `REPO_BASE = '/plately/'` — must match the repo name. PWA via `vite-plugin-pwa` (autoUpdate).
 
