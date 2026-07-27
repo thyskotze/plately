@@ -12,6 +12,7 @@ export default function Library() {
   const openNewFood = useStore((s) => s.openNewFood)
   const openEditFood = useStore((s) => s.openEditFood)
   const openMealDetail = useStore((s) => s.openMealDetail)
+  const openMealBuilder = useStore((s) => s.openMealBuilder)
   const openCnfSearch = useStore((s) => s.openCnfSearch)
   const openBarcodeScan = useStore((s) => s.openBarcodeScan)
   const setSearch = useStore((s) => s.setSearch)
@@ -54,23 +55,21 @@ export default function Library() {
         }}
       >
         <div style={{ font: "700 22px 'Bricolage Grotesque'", color: '#1a1a17' }}>Library</div>
-        {tab === 'foods' && (
-          <div
-            onClick={openNewFood}
-            style={{
-              width: 34,
-              height: 34,
-              borderRadius: '50%',
-              background: '#2E9E5B',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: 'pointer',
-            }}
-          >
-            <Plus size={17} color="#fff" />
-          </div>
-        )}
+        <div
+          onClick={tab === 'foods' ? openNewFood : openMealBuilder}
+          style={{
+            width: 34,
+            height: 34,
+            borderRadius: '50%',
+            background: '#2E9E5B',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            cursor: 'pointer',
+          }}
+        >
+          <Plus size={17} color="#fff" />
+        </div>
       </div>
 
       <div
@@ -205,6 +204,42 @@ export default function Library() {
         </>
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+          <div
+            onClick={openMealBuilder}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 12,
+              background: '#fff',
+              border: '1px solid #EFE9DD',
+              borderRadius: 14,
+              padding: '11px 14px',
+              margin: '2px 0 4px',
+              cursor: 'pointer',
+            }}
+          >
+            <div
+              style={{
+                width: 34,
+                height: 34,
+                borderRadius: 10,
+                background: '#2E9E5B',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                flex: 'none',
+              }}
+            >
+              <Plus size={17} color="#fff" />
+            </div>
+            <div style={{ flex: 1 }}>
+              <div style={{ font: '700 13px Figtree', color: '#1a1a17' }}>Build a meal</div>
+              <div style={{ font: '500 11px Figtree', color: ink(0.55) }}>
+                Combine your foods into a reusable meal
+              </div>
+            </div>
+            <ChevronRight />
+          </div>
           <div
             style={{
               display: 'flex',

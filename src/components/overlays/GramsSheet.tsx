@@ -1,7 +1,7 @@
 import { useStore } from '../../store'
 import { SLOTS } from '../../types'
 import { DAYS } from '../../seed'
-import { round, foodById } from '../../lib/calc'
+import { round, foodById, toNum } from '../../lib/calc'
 import { COLORS, ink } from '../../tokens'
 import { Minus, Plus } from '../../icons'
 import Sheet from '../Sheet'
@@ -63,26 +63,41 @@ export default function GramsSheet() {
           margin: '16px 0',
         }}
       >
-        <div onClick={() => gStep(-10)} style={circleBtn}>
+        <div onClick={() => gStep(-5)} style={circleBtn}>
           <Minus color={COLORS.ink} />
         </div>
-        <div style={{ textAlign: 'center', minWidth: 96 }}>
-          <div style={{ font: '700 40px/1 Space Grotesk', color: COLORS.ink }}>{gVal}</div>
-          <div style={{ font: '500 12px Figtree', color: ink(0.5), marginTop: 2 }}>grams</div>
+        <div style={{ textAlign: 'center', minWidth: 110 }}>
+          <input
+            value={String(gVal)}
+            onChange={(e) => gSet(Math.max(0, toNum(e.target.value)))}
+            inputMode="decimal"
+            style={{
+              width: 110,
+              border: 'none',
+              borderBottom: `2px solid ${COLORS.inputBorder}`,
+              background: 'none',
+              font: '700 40px/1 Space Grotesk',
+              textAlign: 'center',
+              color: COLORS.ink,
+              outline: 'none',
+              padding: '0 0 2px',
+            }}
+          />
+          <div style={{ font: '500 12px Figtree', color: ink(0.5), marginTop: 4 }}>grams</div>
         </div>
-        <div onClick={() => gStep(10)} style={circleBtn}>
+        <div onClick={() => gStep(5)} style={circleBtn}>
           <Plus size={20} color={COLORS.ink} />
         </div>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 7, marginBottom: 16 }}>
-        {[50, 100, 150, 200].map((x) => {
+      <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 16 }}>
+        {[5, 15, 50, 100, 150].map((x) => {
           const c = chip(x === gVal)
           return (
             <div
               key={x}
               onClick={() => gSet(x)}
               style={{
-                padding: '6px 13px',
+                padding: '6px 10px',
                 borderRadius: 999,
                 background: c.background,
                 border: c.border,

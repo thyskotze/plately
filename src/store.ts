@@ -45,6 +45,7 @@ export type Overlay =
   | 'mealdetail'
   | 'cnfsearch'
   | 'barcode'
+  | 'mealbuilder'
 
 export interface NewFoodDraft {
   name: string
@@ -164,6 +165,9 @@ export interface AppState extends PersistState, EphemeralState {
   confirmMeal: () => void
   openMealDetail: (id: string) => void
   addMeal: (day: number, slot: SlotKey, mealId: string, servings: number) => void
+  // build-a-meal
+  openMealBuilder: () => void
+  addBuiltMeal: (meal: Meal) => void
   // planner
   selectDay: (i: number) => void
   // shopping
@@ -460,6 +464,12 @@ export const useStore = create<AppState>()(
         const meal = s.meals.find((m) => m.id === s.chosenMealId)
         set({ mealsByDay: mb, overlay: 'none', xp: Math.min(s.xpMax, s.xp + 15) })
         s.showToast(`${meal?.name ?? 'Meal'} added  +15 XP`)
+      },
+      openMealBuilder: () => set({ overlay: 'mealbuilder' }),
+      addBuiltMeal: (meal) => {
+        const s = get()
+        set({ meals: [meal, ...s.meals], overlay: 'none' })
+        s.showToast(`${meal.name} saved to meals`)
       },
       openMealDetail: (id) => set({ overlay: 'mealdetail', chosenMealId: id }),
       addMeal: (day, slot, mealId, servings) => {

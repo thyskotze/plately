@@ -41,6 +41,14 @@ export default function Home() {
   const calOff = off(t.kcal, goals.kcal, RING_DASH)
   const calPlannedOff = off(planned.kcal, goals.kcal, RING_DASH)
 
+  // Over-limit "watch hand": how far past the goal you've eaten (capped at one loop).
+  const over = goals.kcal > 0 && t.kcal > goals.kcal
+  const overFrac = over ? Math.min((t.kcal - goals.kcal) / goals.kcal, 1) : 0
+  const handRad = ((-90 + 360 * overFrac) * Math.PI) / 180
+  const handX = 93 + 70 * Math.cos(handRad)
+  const handY = 93 + 70 * Math.sin(handRad)
+  const OVER_RED = '#E4572E'
+
   const macros = [
     { label: 'Protein', val: round(t.p), plan: round(planned.p), goal: goals.protein, ...MACRO.protein },
     { label: 'Carbs', val: round(t.c), plan: round(planned.c), goal: goals.carbs, ...MACRO.carbs },
@@ -124,19 +132,35 @@ export default function Home() {
               strokeDashoffset={calPlannedOff}
               transform="rotate(-90 93 93)"
             />
-            {/* solid arc = meals ticked off as eaten */}
+            {/* solid arc = meals ticked off as eaten (red + full when over) */}
             <circle
               cx="93"
               cy="93"
               r="76"
               fill="none"
-              stroke="#2E9E5B"
+              stroke={over ? OVER_RED : '#2E9E5B'}
               strokeWidth="15"
               strokeLinecap="round"
               strokeDasharray="477.5"
               strokeDashoffset={calOff}
               transform="rotate(-90 93 93)"
             />
+            {/* over-limit watch hand */}
+            {over && (
+              <>
+                <line
+                  x1="93"
+                  y1="93"
+                  x2={handX}
+                  y2={handY}
+                  stroke={OVER_RED}
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                />
+                <circle cx="93" cy="93" r="4.5" fill={OVER_RED} />
+                <circle cx={handX} cy={handY} r="4" fill={OVER_RED} />
+              </>
+            )}
           </svg>
           <div
             style={{
@@ -148,14 +172,21 @@ export default function Home() {
               justifyContent: 'center',
             }}
           >
-            <div style={{ font: "700 44px/1 'Space Grotesk',sans-serif", color: '#1a1a17' }}>
+            <div
+              style={{
+                font: "700 44px/1 'Space Grotesk',sans-serif",
+                color: over ? OVER_RED : '#1a1a17',
+              }}
+            >
               {fmt(Math.abs(left))}
             </div>
-            <div style={{ font: '500 12px Figtree', color: ink(0.5), marginTop: 3 }}>
+            <div style={{ font: '600 12px Figtree', color: over ? OVER_RED : ink(0.5), marginTop: 3 }}>
               {left >= 0 ? 'kcal left' : 'kcal over'}
             </div>
-            <div style={{ font: '500 11px Figtree', color: ink(0.35), marginTop: 6 }}>
-              {fmt(t.kcal)} eaten · {fmt(planned.kcal)} planned
+            <div style={{ font: '500 10.5px/1.35 Figtree', color: ink(0.4), marginTop: 6, textAlign: 'center' }}>
+              {fmt(t.kcal)} eaten
+              <br />
+              {fmt(planned.kcal)} planned
             </div>
           </div>
         </div>
@@ -218,6 +249,14 @@ export default function Home() {
               </div>
             </div>
             <div style={{ font: '600 11px Figtree', color: ink(0.55) }}>{m.label}</div>
+            <div
+              style={{
+                font: "600 10px 'Space Grotesk'",
+                color: m.val > m.goal ? OVER_RED : ink(0.4),
+              }}
+            >
+              {m.val} / {m.goal}g
+            </div>
           </div>
         ))}
       </div>
