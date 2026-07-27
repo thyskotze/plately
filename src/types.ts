@@ -75,8 +75,8 @@ export const isMealPortion = (p: Portion): p is MealPortion =>
 
 export type DayMeals = Record<SlotKey, Portion[]>
 
-/** mealsByDay is keyed 0..6 (Mon..Sun). */
-export type MealsByDay = Record<number, DayMeals>
+/** mealsByDay is keyed by local date string "YYYY-MM-DD". */
+export type MealsByDay = Record<string, DayMeals>
 
 export interface Goals {
   kcal: number
