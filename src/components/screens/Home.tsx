@@ -1,28 +1,27 @@
 import { useStore } from '../../store'
 import { ink, MACRO } from '../../tokens'
-import { round, fmt, clamp01, dayTotals, eatenTotals, itemMetrics } from '../../lib/calc'
-import { Flame, Utensils, Plus, Check, ChevronRight, Share } from '../../icons'
+import { round, fmt, clamp01, dayTotals, eatenTotals } from '../../lib/calc'
+import { Flame, Plus, Share } from '../../icons'
+import { todayISO } from '../../lib/dates'
+import { computeStreak } from '../../lib/streak'
+import DaySlots from '../DaySlots'
 
-const TODAY = 1
 const RING_DASH = 477.5
 const MINI_DASH = 150.8
 
 export default function Home() {
   const foods = useStore((s) => s.foods)
   const meals = useStore((s) => s.meals)
-  const mealSlots = useStore((s) => s.mealSlots)
   const mealsByDay = useStore((s) => s.mealsByDay)
   const goals = useStore((s) => s.goals)
-  const streak = useStore((s) => s.streak)
   const eaten = useStore((s) => s.eaten)
   const name = useStore((s) => s.name)
   const openProfile = useStore((s) => s.openProfile)
-  const openPick = useStore((s) => s.openPick)
-  const openEditItem = useStore((s) => s.openEditItem)
-  const toggleEaten = useStore((s) => s.toggleEaten)
   const openShare = useStore((s) => s.openShare)
   const openSlots = useStore((s) => s.openSlots)
-  const saveSlotAsMeal = useStore((s) => s.saveSlotAsMeal)
+
+  const today = todayISO()
+  const streak = computeStreak(foods, meals, mealsByDay, eaten, goals.kcal, today)
 
   const firstName = name.trim().split(' ')[0] || 'there'
   const initial = (name.trim()[0] || 'P').toUpperCase()
@@ -34,9 +33,9 @@ export default function Home() {
     day: 'numeric',
   })
 
-  const eatenToday = eaten[TODAY]
-  const planned = dayTotals(foods, meals, mealsByDay[TODAY]) // everything laid out today
-  const t = eatenTotals(foods, meals, mealsByDay[TODAY], eatenToday) // only ticked-off meals
+  const eatenToday = eaten[today]
+  const planned = dayTotals(foods, meals, mealsByDay[today]) // everything laid out today
+  const t = eatenTotals(foods, meals, mealsByDay[today], eatenToday) // only ticked-off meals
   const left = goals.kcal - t.kcal
   const off = (total: number, goal: number, dash: number) =>
     (dash * (1 - clamp01(total / goal))).toFixed(1)
@@ -324,183 +323,26 @@ export default function Home() {
         </div>
       </div>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {mealSlots.map(({ key, label }) => {
-          const items = (mealsByDay[TODAY]?.[key] || []).map((it, idx) => ({
-            ...itemMetrics(foods, meals, it),
-            idx,
-          }))
-          const kc = items.reduce((a, b) => a + b.kcal, 0)
-          const hasItems = items.length > 0
-          const done = !!eatenToday?.[key]
-          return (
-            <div
-              key={key}
-              style={{
-                background: done ? '#F4FAF6' : '#fff',
-                border: `1px solid ${done ? '#CFE6D8' : '#EFE9DD'}`,
-                borderRadius: 16,
-                padding: '11px 14px',
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 11 }}>
-                {hasItems ? (
-                  <div
-                    onClick={() => toggleEaten(TODAY, key)}
-                    title={done ? 'Eaten — tap to undo' : 'Mark as eaten'}
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: '50%',
-                      background: done ? '#2E9E5B' : '#fff',
-                      border: done ? 'none' : '2px solid #CFE6D8',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      cursor: 'pointer',
-                      flex: 'none',
-                    }}
-                  >
-                    {done && <Check size={16} color="#fff" strokeWidth={3} />}
-                  </div>
-                ) : (
-                  <div
-                    style={{
-                      width: 32,
-                      height: 32,
-                      borderRadius: 9,
-                      background: '#FDF3E6',
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      flex: 'none',
-                    }}
-                  >
-                    <Utensils />
-                  </div>
-                )}
-                <div style={{ flex: 1 }}>
-                  <div style={{ font: '600 13px Figtree', color: '#1a1a17' }}>{label}</div>
-                  <div style={{ font: '500 11px Figtree', color: ink(0.45) }}>
-                    {items.length ? items.map((i) => i.name).join(', ') : 'Tap + to add'}
-                  </div>
-                </div>
-                <div
-                  style={{
-                    font: "700 13px 'Space Grotesk'",
-                    color: done ? '#2E9E5B' : '#1a1a17',
-                    marginRight: 8,
-                  }}
-                >
-                  {items.length ? (
-                    <>
-                      {kc}
-                      <span style={{ font: '500 9px Figtree', color: ink(0.4) }}> kcal</span>
-                    </>
-                  ) : (
-                    '—'
-                  )}
-                </div>
-                <div
-                  onClick={() => openPick(TODAY, key)}
-                  style={{
-                    width: 28,
-                    height: 28,
-                    borderRadius: '50%',
-                    background: '#EAF5EE',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    cursor: 'pointer',
-                  }}
-                >
-                  <Plus color="#2E9E5B" />
-                </div>
-              </div>
-              {items.map((it) => (
-                <div
-                  key={it.idx}
-                  onClick={() => openEditItem(TODAY, key, it.idx)}
-                  style={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 8,
-                    marginTop: 9,
-                    paddingLeft: 43,
-                    cursor: 'pointer',
-                  }}
-                >
-                  <div style={{ flex: 1, font: '500 12px Figtree', color: ink(0.7) }}>
-                    {it.name}
-                  </div>
-                  <div style={{ font: '500 11px Figtree', color: ink(0.4) }}>
-                    {it.isMeal
-                      ? it.servings === 1
-                        ? '1 serving'
-                        : `${it.servings} servings`
-                      : `${it.grams}g`}
-                  </div>
-                  <div
-                    style={{
-                      font: "600 11px 'Space Grotesk'",
-                      color: ink(0.55),
-                      width: 42,
-                      textAlign: 'right',
-                    }}
-                  >
-                    {it.kcal}
-                  </div>
-                  <ChevronRight size={13} color="#C9C1B2" strokeWidth={2.4} />
-                </div>
-              ))}
-              {hasItems && (
-                <div
-                  style={{
-                    display: 'flex',
-                    justifyContent: 'flex-end',
-                    marginTop: 10,
-                    paddingTop: 9,
-                    borderTop: '1px solid #F1ECE1',
-                  }}
-                >
-                  <div
-                    onClick={() => saveSlotAsMeal(TODAY, key)}
-                    style={{
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 5,
-                      cursor: 'pointer',
-                      font: '700 11px Figtree',
-                      color: '#2E9E5B',
-                    }}
-                  >
-                    <Utensils size={13} color="#2E9E5B" />
-                    Save as a meal
-                  </div>
-                </div>
-              )}
-            </div>
-          )
-        })}
+      <DaySlots date={today} showCheckoff />
 
-        <div
-          onClick={openSlots}
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 6,
-            padding: '11px 14px',
-            borderRadius: 16,
-            border: `1px dashed ${'#D8D0C0'}`,
-            font: '600 12px Figtree',
-            color: ink(0.5),
-            cursor: 'pointer',
-          }}
-        >
-          <Plus size={14} color={ink(0.5)} />
-          Add or edit meals
-        </div>
+      <div
+        onClick={openSlots}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          gap: 6,
+          padding: '11px 14px',
+          marginTop: 8,
+          borderRadius: 16,
+          border: `1px dashed ${'#D8D0C0'}`,
+          font: '600 12px Figtree',
+          color: ink(0.5),
+          cursor: 'pointer',
+        }}
+      >
+        <Plus size={14} color={ink(0.5)} />
+        Add or edit meals
       </div>
     </div>
   )
