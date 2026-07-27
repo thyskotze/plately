@@ -1,5 +1,5 @@
 import { useStore } from '../../store'
-import { DAYS } from '../../seed'
+import { todayISO, relativeLabel } from '../../lib/dates'
 import { round, mealById } from '../../lib/calc'
 import { COLORS, ink } from '../../tokens'
 import { Minus, Plus } from '../../icons'
@@ -11,7 +11,7 @@ export default function MealAmountSheet() {
   const chosenMealId = useStore((s) => s.chosenMealId)
   const mVal = useStore((s) => s.mVal)
   const pickSlot = useStore((s) => s.pickSlot)
-  const pickDay = useStore((s) => s.pickDay)
+  const pickDate = useStore((s) => s.pickDate)
   const mealSlots = useStore((s) => s.mealSlots)
   const mStep = useStore((s) => s.mStep)
   const confirmMeal = useStore((s) => s.confirmMeal)
@@ -26,7 +26,7 @@ export default function MealAmountSheet() {
 
   const pickDest =
     (mealSlots.find((x) => x.key === pickSlot)?.label ?? pickSlot) +
-    (pickDay !== 1 ? ' · ' + DAYS[pickDay].dow : '')
+    (pickDate !== todayISO() ? ' · ' + relativeLabel(pickDate) : '')
 
   const circleBtn = {
     width: 44,

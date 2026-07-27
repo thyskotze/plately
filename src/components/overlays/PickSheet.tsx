@@ -1,5 +1,5 @@
 import { useStore } from '../../store'
-import { DAYS } from '../../seed'
+import { todayISO, relativeLabel } from '../../lib/dates'
 import { tag, macroLine, round } from '../../lib/calc'
 import { COLORS, ink } from '../../tokens'
 import { Search } from '../../icons'
@@ -12,7 +12,7 @@ export default function PickSheet() {
   const mealSlots = useStore((s) => s.mealSlots)
   const pickSearch = useStore((s) => s.pickSearch)
   const pickSlot = useStore((s) => s.pickSlot)
-  const pickDay = useStore((s) => s.pickDay)
+  const pickDate = useStore((s) => s.pickDate)
   const pickTab = useStore((s) => s.pickTab)
   const setPickSearch = useStore((s) => s.setPickSearch)
   const setPickTab = useStore((s) => s.setPickTab)
@@ -24,7 +24,7 @@ export default function PickSheet() {
 
   const pickDest =
     (mealSlots.find((x) => x.key === pickSlot)?.label ?? pickSlot) +
-    (pickDay !== 1 ? ' · ' + DAYS[pickDay].dow : '')
+    (pickDate !== todayISO() ? ' · ' + relativeLabel(pickDate) : '')
 
   const q = pickSearch.toLowerCase()
   const foodList = foods.filter((f) => f.name.toLowerCase().includes(q))

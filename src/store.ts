@@ -24,15 +24,8 @@ import { SEED_MEALS_LIB } from './seedMeals'
 import { EXTRA_FOODS } from './seedFoodsExtra'
 import { suggestKcal, suggestMacros, deriveMacros, toNum } from './lib/calc'
 import { isUpdateAvailable } from './lib/update'
+import { todayISO, addDays, remapWeekKeys, type ISODate } from './lib/dates'
 import type { ShareCard } from './lib/share'
-
-const emptyWeek = (): MealsByDay => {
-  const w: MealsByDay = {}
-  for (let i = 0; i < 7; i++) {
-    w[i] = { breakfast: [], lunch: [], dinner: [], snacks: [] } as DayMeals
-  }
-  return w
-}
 
 export type Screen = 'home' | 'plan' | 'shopping' | 'stats' | 'library'
 export type Overlay =
@@ -84,14 +77,12 @@ export interface PersistState {
   goals: Goals
   weights: WeightEntry[]
   weightGoal: number
-  streak: number
   level: number
   xp: number
   xpMax: number
   shopChecked: Record<string, boolean>
-  /** Which meal slots the user has ticked as eaten, per day index. */
-  eaten: Record<number, Partial<Record<SlotKey, boolean>>>
-  selDay: number
+  /** Which meal slots the user has ticked as eaten, per date. */
+  eaten: Record<ISODate, Partial<Record<SlotKey, boolean>>>
   seenIntro: boolean
 }
 
@@ -99,7 +90,7 @@ interface EphemeralState {
   screen: Screen
   overlay: Overlay
   // pick / grams
-  pickDay: number
+  pickDate: ISODate
   pickSlot: SlotKey
   pickSearch: string
   pickTab: 'foods' | 'meals'
@@ -118,7 +109,9 @@ interface EphemeralState {
   aiStep: 'prompt' | 'paste'
   aiText: string
   // editing an existing logged portion (null = adding a new one)
-  editRef: { day: number; slot: SlotKey; idx: number } | null
+  editRef: { date: ISODate; slot: SlotKey; idx: number } | null
+  // calendar selected day (Planner)
+  selDate: ISODate
   // editing an existing library food (null = creating a new one)
   editFoodId: string | null
   // editing an existing built meal (null = building a new one)
@@ -164,7 +157,7 @@ export interface AppState extends PersistState, EphemeralState {
   setGl: (k: keyof GoalsDraft, v: string) => void
   saveGoals: () => void
   // picking / logging
-  openPick: (day: number, slot: SlotKey) => void
+  openPick: (date: ISODate, slot: SlotKey) => void
   openQuick: () => void
   setPickSearch: (v: string) => void
   setPickTab: (tab: 'foods' | 'meals') => void
@@ -172,8 +165,8 @@ export interface AppState extends PersistState, EphemeralState {
   gStep: (d: number) => void
   gSet: (v: number) => void
   confirmGrams: () => void
-  removeItem: (day: number, slot: SlotKey, idx: number) => void
-  openEditItem: (day: number, slot: SlotKey, idx: number) => void
+  removeItem: (date: ISODate, slot: SlotKey, idx: number) => void
+  openEditItem: (date: ISODate, slot: SlotKey, idx: number) => void
   deleteEditItem: () => void
   // saved meals
   chooseMeal: (id: string) => void
@@ -181,7 +174,7 @@ export interface AppState extends PersistState, EphemeralState {
   mSet: (v: number) => void
   confirmMeal: () => void
   openMealDetail: (id: string) => void
-  addMeal: (day: number, slot: SlotKey, mealId: string, servings: number) => void
+  addMeal: (date: ISODate, slot: SlotKey, mealId: string, servings: number) => void
   // build-a-meal
   openMealBuilder: () => void
   addBuiltMeal: (meal: Meal) => void
@@ -189,13 +182,14 @@ export interface AppState extends PersistState, EphemeralState {
   updateBuiltMeal: (id: string, meal: Meal) => void
   deleteMeal: (id: string) => void
   /** Turn the foods already logged in a day-slot into a new reusable meal. */
-  saveSlotAsMeal: (day: number, slot: SlotKey) => void
+  saveSlotAsMeal: (date: ISODate, slot: SlotKey) => void
   // planner
-  selectDay: (i: number) => void
+  selectDate: (date: ISODate) => void
+  shiftWeek: (dir: -1 | 1) => void
   // shopping
   toggleShop: (id: string) => void
   // meal check-off
-  toggleEaten: (day: number, slot: SlotKey) => void
+  toggleEaten: (date: ISODate, slot: SlotKey) => void
   // meal-slot configuration
   openSlots: () => void
   addSlot: (label: string) => void
@@ -246,24 +240,23 @@ const initialPersist: PersistState = {
   foods: [...SEED_FOODS, ...EXTRA_FOODS],
   meals: SEED_MEALS_LIB,
   mealSlots: DEFAULT_SLOTS,
-  mealsByDay: emptyWeek(),
+  mealsByDay: {},
   goals: { kcal: 2000, protein: 140, carbs: 200, fat: 65 },
   weights: [],
   weightGoal: 0,
-  streak: 0,
   level: 1,
   xp: 0,
   xpMax: 500,
   shopChecked: {},
   eaten: {},
-  selDay: 1,
   seenIntro: false,
 }
 
 const initialEphemeral: EphemeralState = {
   screen: 'home',
   overlay: 'none',
-  pickDay: 1,
+  pickDate: todayISO(),
+  selDate: todayISO(),
   pickSlot: 'snacks',
   pickSearch: '',
   pickTab: 'foods',
@@ -401,13 +394,13 @@ export const useStore = create<AppState>()(
         get().showToast('Goals updated')
       },
 
-      openPick: (day, slot) =>
-        set({ overlay: 'pick', pickDay: day, pickSlot: slot, pickSearch: '', pickTab: 'foods' }),
+      openPick: (date, slot) =>
+        set({ overlay: 'pick', pickDate: date, pickSlot: slot, pickSearch: '', pickTab: 'foods' }),
       openQuick: () => {
         const slots = get().mealSlots
         set({
           overlay: 'pick',
-          pickDay: 1,
+          pickDate: todayISO(),
           pickSlot: slots[slots.length - 1]?.key || 'snacks',
           pickSearch: '',
           pickTab: 'foods',
@@ -426,24 +419,24 @@ export const useStore = create<AppState>()(
 
         // Edit mode: update the grams of an existing portion in place.
         if (s.editRef) {
-          const { day, slot, idx } = s.editRef
-          const d = { ...(mb[day] || {}) } as MealsByDay[number]
+          const { date, slot, idx } = s.editRef
+          const d = { ...(mb[date] || {}) } as MealsByDay[string]
           const arr = [...(d[slot] || [])]
           if (arr[idx]) arr[idx] = { ...arr[idx], grams: s.gVal }
           d[slot] = arr
-          mb[day] = d
+          mb[date] = d
           set({ mealsByDay: mb, overlay: 'none', editRef: null })
           s.showToast('Portion updated')
           return
         }
 
         // Add mode: append a new portion and award XP.
-        const day = { ...(mb[s.pickDay] || {}) } as MealsByDay[number]
+        const day = { ...(mb[s.pickDate] || {}) } as MealsByDay[string]
         day[s.pickSlot] = [
           ...(day[s.pickSlot] || []),
           { foodId: s.chosenId, grams: s.gVal },
         ]
-        mb[s.pickDay] = day
+        mb[s.pickDate] = day
         const food = s.foods.find((f) => f.id === s.chosenId)
         set({
           mealsByDay: mb,
@@ -452,41 +445,41 @@ export const useStore = create<AppState>()(
         })
         s.showToast(`${food?.name ?? 'Food'} logged  +15 XP`)
       },
-      removeItem: (day, slot, idx) =>
+      removeItem: (date, slot, idx) =>
         set((s) => {
           const mb: MealsByDay = { ...s.mealsByDay }
-          const d = { ...(mb[day] || {}) } as MealsByDay[number]
+          const d = { ...(mb[date] || {}) } as MealsByDay[string]
           const arr = [...(d[slot] || [])]
           arr.splice(idx, 1)
           d[slot] = arr
-          mb[day] = d
+          mb[date] = d
           return { mealsByDay: mb }
         }),
-      openEditItem: (day, slot, idx) => {
+      openEditItem: (date, slot, idx) => {
         const s = get()
-        const portion = s.mealsByDay[day]?.[slot]?.[idx]
+        const portion = s.mealsByDay[date]?.[slot]?.[idx]
         if (!portion) return
         if (isMealPortion(portion)) {
           set({
             overlay: 'mealamount',
             chosenMealId: portion.mealId,
             mVal: portion.servings,
-            editRef: { day, slot, idx },
+            editRef: { date, slot, idx },
           })
         } else {
           set({
             overlay: 'grams',
             chosenId: portion.foodId,
             gVal: portion.grams,
-            editRef: { day, slot, idx },
+            editRef: { date, slot, idx },
           })
         }
       },
       deleteEditItem: () => {
         const s = get()
         if (!s.editRef) return
-        const { day, slot, idx } = s.editRef
-        s.removeItem(day, slot, idx)
+        const { date, slot, idx } = s.editRef
+        s.removeItem(date, slot, idx)
         set({ overlay: 'none', editRef: null })
         s.showToast('Removed from meal')
       },
@@ -501,20 +494,20 @@ export const useStore = create<AppState>()(
         const mb: MealsByDay = { ...s.mealsByDay }
 
         if (s.editRef) {
-          const { day, slot, idx } = s.editRef
-          const d = { ...(mb[day] || {}) } as MealsByDay[number]
+          const { date, slot, idx } = s.editRef
+          const d = { ...(mb[date] || {}) } as MealsByDay[string]
           const arr = [...(d[slot] || [])]
           if (arr[idx]) arr[idx] = { mealId: s.chosenMealId, servings: s.mVal }
           d[slot] = arr
-          mb[day] = d
+          mb[date] = d
           set({ mealsByDay: mb, overlay: 'none', editRef: null })
           s.showToast('Servings updated')
           return
         }
 
-        const day = { ...(mb[s.pickDay] || {}) } as MealsByDay[number]
+        const day = { ...(mb[s.pickDate] || {}) } as MealsByDay[string]
         day[s.pickSlot] = [...(day[s.pickSlot] || []), { mealId: s.chosenMealId, servings: s.mVal }]
-        mb[s.pickDay] = day
+        mb[s.pickDate] = day
         const meal = s.meals.find((m) => m.id === s.chosenMealId)
         set({ mealsByDay: mb, overlay: 'none', xp: Math.min(s.xpMax, s.xp + 15) })
         s.showToast(`${meal?.name ?? 'Meal'} added  +15 XP`)
@@ -535,9 +528,9 @@ export const useStore = create<AppState>()(
         })
         s.showToast(`${meal.name} updated`)
       },
-      saveSlotAsMeal: (day, slot) => {
+      saveSlotAsMeal: (date, slot) => {
         const s = get()
-        const portions = s.mealsByDay[day]?.[slot] || []
+        const portions = s.mealsByDay[date]?.[slot] || []
         // Collapse the slot's logged portions into a food→grams list. Food
         // portions map directly; saved-meal portions expand via their items
         // (grams × servings). Seed meals without items can't be expanded.
@@ -575,15 +568,14 @@ export const useStore = create<AppState>()(
         // view points at a missing meal (mirrors deleteFood).
         const keep = (p: Portion) => !isMealPortion(p) || p.mealId !== id
         const mb: MealsByDay = {}
-        for (let i = 0; i < 7; i++) {
-          const d = s.mealsByDay[i]
-          if (!d) continue
-          const nd: MealsByDay[number] = {}
+        Object.keys(s.mealsByDay).forEach((date) => {
+          const d = s.mealsByDay[date]
+          const nd: MealsByDay[string] = {}
           Object.keys(d).forEach((k) => {
             nd[k] = d[k].filter(keep)
           })
-          mb[i] = nd
-        }
+          mb[date] = nd
+        })
         set({
           meals: s.meals.filter((m) => m.id !== id),
           mealsByDay: mb,
@@ -594,25 +586,26 @@ export const useStore = create<AppState>()(
         s.showToast('Meal deleted')
       },
       openMealDetail: (id) => set({ overlay: 'mealdetail', chosenMealId: id }),
-      addMeal: (day, slot, mealId, servings) => {
+      addMeal: (date, slot, mealId, servings) => {
         const s = get()
         const mb: MealsByDay = { ...s.mealsByDay }
-        const d = { ...(mb[day] || {}) } as MealsByDay[number]
+        const d = { ...(mb[date] || {}) } as MealsByDay[string]
         d[slot] = [...(d[slot] || []), { mealId, servings }]
-        mb[day] = d
+        mb[date] = d
         const meal = s.meals.find((m) => m.id === mealId)
         set({ mealsByDay: mb, overlay: 'none', xp: Math.min(s.xpMax, s.xp + 15) })
         s.showToast(`${meal?.name ?? 'Meal'} added  +15 XP`)
       },
 
-      selectDay: (i) => set({ selDay: i }),
+      selectDate: (date) => set({ selDate: date }),
+      shiftWeek: (dir) => set((s) => ({ selDate: addDays(s.selDate, 7 * dir) })),
       toggleShop: (id) =>
         set((s) => ({ shopChecked: { ...s.shopChecked, [id]: !s.shopChecked[id] } })),
-      toggleEaten: (day, slot) =>
+      toggleEaten: (date, slot) =>
         set((s) => {
-          const forDay = { ...(s.eaten[day] || {}) }
+          const forDay = { ...(s.eaten[date] || {}) }
           forDay[slot] = !forDay[slot]
-          return { eaten: { ...s.eaten, [day]: forDay } }
+          return { eaten: { ...s.eaten, [date]: forDay } }
         }),
 
       openSlots: () => set({ overlay: 'slots' }),
@@ -633,20 +626,19 @@ export const useStore = create<AppState>()(
           if (s.mealSlots.length <= 1) return {} // keep at least one slot
           // Drop the slot and its logged portions / eaten flags across all days.
           const mb: MealsByDay = {}
-          for (let i = 0; i < 7; i++) {
-            const d = s.mealsByDay[i]
-            if (!d) continue
-            const nd: MealsByDay[number] = {}
+          Object.keys(s.mealsByDay).forEach((date) => {
+            const d = s.mealsByDay[date]
+            const nd: MealsByDay[string] = {}
             Object.keys(d).forEach((k) => {
               if (k !== key) nd[k] = d[k]
             })
-            mb[i] = nd
-          }
+            mb[date] = nd
+          })
           const eaten: typeof s.eaten = {}
-          Object.keys(s.eaten).forEach((di) => {
-            const forDay = { ...s.eaten[+di] }
+          Object.keys(s.eaten).forEach((date) => {
+            const forDay = { ...s.eaten[date] }
             delete forDay[key]
-            eaten[+di] = forDay
+            eaten[date] = forDay
           })
           return { mealSlots: s.mealSlots.filter((m) => m.key !== key), mealsByDay: mb, eaten }
         }),
@@ -722,15 +714,14 @@ export const useStore = create<AppState>()(
         // meal/shopping views never point at a missing food.
         const keep = (p: Portion) => isMealPortion(p) || p.foodId !== id
         const mb: MealsByDay = {}
-        for (let i = 0; i < 7; i++) {
-          const d = s.mealsByDay[i]
-          if (!d) continue
-          const nd: MealsByDay[number] = {}
+        Object.keys(s.mealsByDay).forEach((date) => {
+          const d = s.mealsByDay[date]
+          const nd: MealsByDay[string] = {}
           Object.keys(d).forEach((k) => {
             nd[k] = d[k].filter(keep)
           })
-          mb[i] = nd
-        }
+          mb[date] = nd
+        })
         const shopChecked = { ...s.shopChecked }
         delete shopChecked[id]
         set({
@@ -811,13 +802,11 @@ export const useStore = create<AppState>()(
           goals: s.goals,
           weights: s.weights,
           weightGoal: s.weightGoal,
-          streak: s.streak,
           level: s.level,
           xp: s.xp,
           xpMax: s.xpMax,
           shopChecked: s.shopChecked,
           eaten: s.eaten,
-          selDay: s.selDay,
           seenIntro: s.seenIntro,
         }
         const blob = new Blob([JSON.stringify(backup, null, 2)], {
@@ -865,6 +854,19 @@ export const useStore = create<AppState>()(
         if (!data || !Array.isArray(data.foods)) {
           return { ok: false, msg: "That file isn't a Plately backup" }
         }
+        // Old (v1) backups keyed days 0..6; remap to real dates anchored to today.
+        const looksOld =
+          !!data.mealsByDay && Object.keys(data.mealsByDay).some((k) => /^\d+$/.test(k))
+        if (looksOld) {
+          const today = todayISO()
+          data.mealsByDay = remapWeekKeys(data.mealsByDay as Record<string, DayMeals>, today)
+          data.eaten = remapWeekKeys(
+            (data.eaten as Record<string, Partial<Record<SlotKey, boolean>>>) || {},
+            today,
+          )
+        }
+        delete (data as { selDay?: number }).selDay
+        delete (data as { streak?: number }).streak
         if (mode === 'replace') {
           set({ ...initialPersist, ...data })
         } else {
@@ -877,6 +879,7 @@ export const useStore = create<AppState>()(
             foods: Array.from(byId.values()),
             meals: Array.from(mealById.values()),
             mealsByDay: data.mealsByDay ?? s.mealsByDay,
+            eaten: data.eaten ?? s.eaten,
             weights: data.weights ?? s.weights,
             goals: data.goals ?? s.goals,
           })
@@ -889,6 +892,25 @@ export const useStore = create<AppState>()(
       // Live: 'plately-v1'. Staging builds get an isolated key (see vite.config.ts)
       // so testing never touches real users' data, even on the same origin.
       name: __STORAGE_KEY__,
+      version: 1,
+      // v0 → v1: integer-keyed template week → real date keys (anchored to today),
+      // drop the now-computed streak and the removed selDay.
+      migrate: (persisted, version) => {
+        const s = persisted as Partial<PersistState> & {
+          mealsByDay?: Record<string, DayMeals>
+          eaten?: Record<string, Partial<Record<SlotKey, boolean>>>
+          selDay?: number
+          streak?: number
+        }
+        if (s && version < 1) {
+          const today = todayISO()
+          s.mealsByDay = remapWeekKeys(s.mealsByDay, today)
+          s.eaten = remapWeekKeys(s.eaten || {}, today)
+          delete s.selDay
+          delete s.streak
+        }
+        return s as PersistState
+      },
       // Only persist the data slice; UI/ephemeral state is not saved.
       partialize: (s): PersistState => ({
         name: s.name,
@@ -901,13 +923,11 @@ export const useStore = create<AppState>()(
         goals: s.goals,
         weights: s.weights,
         weightGoal: s.weightGoal,
-        streak: s.streak,
         level: s.level,
         xp: s.xp,
         xpMax: s.xpMax,
         shopChecked: s.shopChecked,
         eaten: s.eaten,
-        selDay: s.selDay,
         seenIntro: s.seenIntro,
       }),
     },
