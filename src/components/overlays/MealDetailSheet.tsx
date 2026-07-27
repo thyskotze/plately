@@ -2,6 +2,7 @@ import { useStore } from '../../store'
 import { mealById } from '../../lib/calc'
 import { COLORS, ink, MACRO } from '../../tokens'
 import Sheet, { CloseButton } from '../Sheet'
+import { Pencil } from '../../icons'
 
 const TODAY = 1
 
@@ -11,11 +12,16 @@ export default function MealDetailSheet() {
   const mealSlots = useStore((s) => s.mealSlots)
   const chosenMealId = useStore((s) => s.chosenMealId)
   const addMeal = useStore((s) => s.addMeal)
+  const openEditMeal = useStore((s) => s.openEditMeal)
+  const deleteMeal = useStore((s) => s.deleteMeal)
   const close = useStore((s) => s.closeOverlay)
 
   if (!show || !chosenMealId) return null
   const meal = mealById(meals, chosenMealId)
   if (!meal) return null
+
+  // Meals you built (no `source`) can be edited; bundled recipes stay view-only.
+  const editable = !meal.source
 
   const macro = (label: string, val: number, color: string) => (
     <div style={{ flex: 1, textAlign: 'center', background: '#fff', border: `1px solid ${COLORS.cardBorder}`, borderRadius: 12, padding: '10px 4px' }}>
@@ -33,7 +39,28 @@ export default function MealDetailSheet() {
             <div style={{ font: '500 11px Figtree', color: ink(0.5) }}>{meal.source}</div>
           )}
         </div>
-        <CloseButton onClick={close} />
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+          {editable && (
+            <div
+              onClick={() => openEditMeal(meal.id)}
+              aria-label="Edit meal"
+              style={{
+                width: 30,
+                height: 30,
+                borderRadius: '50%',
+                background: COLORS.greenTint,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                flex: 'none',
+              }}
+            >
+              <Pencil size={15} color={COLORS.green} />
+            </div>
+          )}
+          <CloseButton onClick={close} />
+        </div>
       </div>
 
       <div style={{ display: 'flex', gap: 8, margin: '14px 0' }}>
@@ -106,6 +133,23 @@ export default function MealDetailSheet() {
             {label}
           </div>
         ))}
+      </div>
+
+      <div
+        onClick={() => deleteMeal(meal.id)}
+        style={{
+          textAlign: 'center',
+          padding: '12px 14px',
+          marginTop: 14,
+          borderRadius: 14,
+          background: '#fff',
+          border: '1px solid #F0DCD5',
+          font: '700 12.5px Figtree',
+          color: '#E4572E',
+          cursor: 'pointer',
+        }}
+      >
+        Delete meal
       </div>
     </Sheet>
   )

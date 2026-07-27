@@ -1,6 +1,8 @@
+import { useEffect } from 'react'
 import { useStore } from './store'
 import { COLORS } from './tokens'
 import TabBar from './components/TabBar'
+import UpdateBanner from './components/UpdateBanner'
 import Intro from './components/Intro'
 import Onboarding from './components/Onboarding'
 import Home from './components/screens/Home'
@@ -29,6 +31,18 @@ export default function App() {
   const screen = useStore((s) => s.screen)
   const seenIntro = useStore((s) => s.seenIntro)
   const onboarded = useStore((s) => s.onboarded)
+  const checkForUpdate = useStore((s) => s.checkForUpdate)
+
+  // Notice a newer deployed build: once on load, and whenever the app is
+  // brought back to the foreground (installed PWAs stay open for days).
+  useEffect(() => {
+    checkForUpdate()
+    const onVisible = () => {
+      if (document.visibilityState === 'visible') checkForUpdate()
+    }
+    document.addEventListener('visibilitychange', onVisible)
+    return () => document.removeEventListener('visibilitychange', onVisible)
+  }, [checkForUpdate])
 
   return (
     <div className="app-canvas">
@@ -114,6 +128,7 @@ export default function App() {
           <HelpSheet />
           <InfoModal />
           <Toast />
+          <UpdateBanner />
 
           {!onboarded ? <Onboarding /> : !seenIntro && <Intro />}
         </div>

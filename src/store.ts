@@ -22,6 +22,7 @@ import { SEED_FOODS } from './seed'
 import { SEED_MEALS_LIB } from './seedMeals'
 import { EXTRA_FOODS } from './seedFoodsExtra'
 import { suggestKcal, suggestMacros, deriveMacros, toNum } from './lib/calc'
+import { isUpdateAvailable } from './lib/update'
 import type { ShareCard } from './lib/share'
 
 const emptyWeek = (): MealsByDay => {
@@ -119,6 +120,8 @@ interface EphemeralState {
   editRef: { day: number; slot: SlotKey; idx: number } | null
   // editing an existing library food (null = creating a new one)
   editFoodId: string | null
+  // editing an existing built meal (null = building a new one)
+  editMealId: string | null
   // input for weight
   wInput: string
   // info modal
@@ -128,6 +131,10 @@ interface EphemeralState {
   // toast
   toast: string
   toastKey: number
+  // a newer build is live (see lib/update.ts)
+  updateAvailable: boolean
+  // user dismissed the update banner this session
+  updateDismissed: boolean
 }
 
 export interface AppState extends PersistState, EphemeralState {
@@ -175,6 +182,9 @@ export interface AppState extends PersistState, EphemeralState {
   // build-a-meal
   openMealBuilder: () => void
   addBuiltMeal: (meal: Meal) => void
+  openEditMeal: (id: string) => void
+  updateBuiltMeal: (id: string, meal: Meal) => void
+  deleteMeal: (id: string) => void
   // planner
   selectDay: (i: number) => void
   // shopping
@@ -215,8 +225,12 @@ export interface AppState extends PersistState, EphemeralState {
   showToast: (msg: string) => void
   dismissIntro: () => void
   reopenIntro: () => void
+  // app updates
+  checkForUpdate: () => Promise<boolean>
+  dismissUpdate: () => void
   // backup
   exportBackup: () => void
+  exportLibrary: () => void
   importBackup: (raw: string, mode: 'merge' | 'replace') => { ok: boolean; msg: string }
 }
 
@@ -259,11 +273,14 @@ const initialEphemeral: EphemeralState = {
   aiText: '',
   editRef: null,
   editFoodId: null,
+  editMealId: null,
   wInput: '',
   info: null,
   shareData: null,
   toast: '',
   toastKey: 0,
+  updateAvailable: false,
+  updateDismissed: false,
 }
 
 let toastTimer: ReturnType<typeof setTimeout> | undefined
@@ -287,7 +304,14 @@ export const useStore = create<AppState>()(
 
       nav: (s) => set({ screen: s, overlay: 'none' }),
       closeOverlay: () =>
-        set({ overlay: 'none', info: null, editRef: null, editFoodId: null, shareData: null }),
+        set({
+          overlay: 'none',
+          info: null,
+          editRef: null,
+          editFoodId: null,
+          editMealId: null,
+          shareData: null,
+        }),
 
       openProfile: () => set({ overlay: 'profile' }),
       openHelp: () => set({ overlay: 'help' }),
@@ -488,11 +512,45 @@ export const useStore = create<AppState>()(
         set({ mealsByDay: mb, overlay: 'none', xp: Math.min(s.xpMax, s.xp + 15) })
         s.showToast(`${meal?.name ?? 'Meal'} added  +15 XP`)
       },
-      openMealBuilder: () => set({ overlay: 'mealbuilder' }),
+      openMealBuilder: () => set({ overlay: 'mealbuilder', editMealId: null }),
       addBuiltMeal: (meal) => {
         const s = get()
         set({ meals: [meal, ...s.meals], overlay: 'none' })
         s.showToast(`${meal.name} saved to meals`)
+      },
+      openEditMeal: (id) => set({ overlay: 'mealbuilder', editMealId: id }),
+      updateBuiltMeal: (id, meal) => {
+        const s = get()
+        set({
+          meals: s.meals.map((m) => (m.id === id ? { ...meal, id } : m)),
+          overlay: 'none',
+          editMealId: null,
+        })
+        s.showToast(`${meal.name} updated`)
+      },
+      deleteMeal: (id) => {
+        const s = get()
+        // Purge any logged portions that reference this meal so no day/shopping
+        // view points at a missing meal (mirrors deleteFood).
+        const keep = (p: Portion) => !isMealPortion(p) || p.mealId !== id
+        const mb: MealsByDay = {}
+        for (let i = 0; i < 7; i++) {
+          const d = s.mealsByDay[i]
+          if (!d) continue
+          const nd: MealsByDay[number] = {}
+          Object.keys(d).forEach((k) => {
+            nd[k] = d[k].filter(keep)
+          })
+          mb[i] = nd
+        }
+        set({
+          meals: s.meals.filter((m) => m.id !== id),
+          mealsByDay: mb,
+          overlay: 'none',
+          editMealId: null,
+          chosenMealId: null,
+        })
+        s.showToast('Meal deleted')
       },
       openMealDetail: (id) => set({ overlay: 'mealdetail', chosenMealId: id }),
       addMeal: (day, slot, mealId, servings) => {
@@ -691,6 +749,14 @@ export const useStore = create<AppState>()(
       dismissIntro: () => set({ seenIntro: true }),
       reopenIntro: () => set({ seenIntro: false }),
 
+      checkForUpdate: async () => {
+        const isNew = await isUpdateAvailable()
+        // Only surface the banner if the user hasn't dismissed it this session.
+        if (isNew && !get().updateDismissed) set({ updateAvailable: true })
+        return isNew
+      },
+      dismissUpdate: () => set({ updateAvailable: false, updateDismissed: true }),
+
       exportBackup: () => {
         const s = get()
         const backup: PersistState = {
@@ -725,6 +791,29 @@ export const useStore = create<AppState>()(
         URL.revokeObjectURL(url)
         s.showToast('Backup downloaded')
       },
+      exportLibrary: () => {
+        const s = get()
+        // A shareable slice: the food library plus the user's own built meals.
+        // Excludes bundled recipes (they carry a `source`) and all personal
+        // data. Importable via Import backup → Merge (foods/meals de-dupe by id).
+        const shared = {
+          plately: 'library' as const,
+          exportedAt: new Date().toISOString(),
+          foods: s.foods,
+          meals: s.meals.filter((m) => !m.source),
+        }
+        const blob = new Blob([JSON.stringify(shared, null, 2)], {
+          type: 'application/json',
+        })
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        const d = new Date().toISOString().slice(0, 10)
+        a.href = url
+        a.download = `plately-library-${d}.json`
+        a.click()
+        URL.revokeObjectURL(url)
+        s.showToast('Library file downloaded')
+      },
       importBackup: (raw, mode) => {
         let data: Partial<PersistState>
         try {
@@ -756,7 +845,9 @@ export const useStore = create<AppState>()(
       },
     }),
     {
-      name: 'plately-v1',
+      // Live: 'plately-v1'. Staging builds get an isolated key (see vite.config.ts)
+      // so testing never touches real users' data, even on the same origin.
+      name: __STORAGE_KEY__,
       // Only persist the data slice; UI/ephemeral state is not saved.
       partialize: (s): PersistState => ({
         name: s.name,

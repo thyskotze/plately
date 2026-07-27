@@ -51,6 +51,18 @@ export interface Meal {
   ingredients: string[]
   method: string[]
   source?: string
+  /**
+   * The library foods + grams this meal was built from. Present on user-built
+   * meals (via the meal builder); enables re-editing with live macro recalc.
+   * Absent on hand-authored seed recipes (Vicky's), which stay view-only.
+   */
+  items?: MealItem[]
+}
+
+/** One structured component of a built meal: a library food at a given weight. */
+export interface MealItem {
+  foodId: string
+  grams: number
 }
 
 /** A logged portion — either grams of a library food, or servings of a saved meal. */

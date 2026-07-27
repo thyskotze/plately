@@ -1,31 +1,70 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from '../../store'
 import { COLORS, ink } from '../../tokens'
 import { round, foodById, tag, toNum } from '../../lib/calc'
 import Sheet, { CloseButton } from '../Sheet'
 import { Search, Plus, Close } from '../../icons'
-import type { Meal } from '../../types'
+import type { Food, Meal, MealItem } from '../../types'
 
 const r1 = (n: number) => Math.round(n * 10) / 10
 const SECTIONS: Meal['section'][] = ['breakfast', 'lunch', 'dinner']
 
-interface BuildItem {
-  foodId: string
-  grams: number
+/**
+ * Recover the structured foods a built meal came from. New built meals store
+ * `items` directly; meals built before that field existed are reconstructed by
+ * parsing their "<grams> g <name>" ingredient lines back to library foods.
+ */
+function itemsForMeal(meal: Meal, foods: Food[]): MealItem[] {
+  if (meal.items && meal.items.length) return meal.items
+  const out: MealItem[] = []
+  for (const line of meal.ingredients) {
+    const m = /^\s*([\d.,]+)\s*g\s+(.+?)\s*$/.exec(line)
+    if (!m) continue
+    const name = m[2].trim().toLowerCase()
+    const food = foods.find((f) => f.name.toLowerCase() === name)
+    if (food) out.push({ foodId: food.id, grams: toNum(m[1]) })
+  }
+  return out
 }
 
 export default function MealBuilderSheet() {
   const show = useStore((s) => s.overlay === 'mealbuilder')
   const foods = useStore((s) => s.foods)
+  const meals = useStore((s) => s.meals)
+  const editMealId = useStore((s) => s.editMealId)
   const addBuiltMeal = useStore((s) => s.addBuiltMeal)
+  const updateBuiltMeal = useStore((s) => s.updateBuiltMeal)
   const close = useStore((s) => s.closeOverlay)
 
   const [name, setName] = useState('')
   const [section, setSection] = useState<Meal['section']>('lunch')
-  const [items, setItems] = useState<BuildItem[]>([])
+  const [items, setItems] = useState<MealItem[]>([])
   const [q, setQ] = useState('')
 
+  // Prefill from the meal when opening in edit mode; start blank otherwise.
+  useEffect(() => {
+    if (!show) return
+    if (editMealId) {
+      const meal = meals.find((m) => m.id === editMealId)
+      if (meal) {
+        setName(meal.name)
+        setSection(meal.section)
+        setItems(itemsForMeal(meal, foods))
+        setQ('')
+        return
+      }
+    }
+    setName('')
+    setSection('lunch')
+    setItems([])
+    setQ('')
+    // Load once per open / target change; foods/meals are read as a snapshot.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [show, editMealId])
+
   if (!show) return null
+
+  const editing = !!editMealId
 
   const totals = items.reduce(
     (acc, it) => {
@@ -45,17 +84,10 @@ export default function MealBuilderSheet() {
   const matches = query ? foods.filter((f) => f.name.toLowerCase().includes(query)).slice(0, 8) : []
   const canSave = name.trim().length > 0 && items.length > 0
 
-  const reset = () => {
-    setName('')
-    setSection('lunch')
-    setItems([])
-    setQ('')
-  }
-
   const save = () => {
     if (!canSave) return
     const meal: Meal = {
-      id: 'm' + Date.now(),
+      id: editMealId ?? 'm' + Date.now(),
       name: name.trim(),
       section,
       kcal: round(totals.kcal),
@@ -64,9 +96,10 @@ export default function MealBuilderSheet() {
       f: r1(totals.f),
       ingredients: items.map((it) => `${it.grams} g ${foodById(foods, it.foodId)?.name ?? ''}`.trim()),
       method: [],
+      items,
     }
-    addBuiltMeal(meal)
-    reset()
+    if (editing) updateBuiltMeal(meal.id, meal)
+    else addBuiltMeal(meal)
   }
 
   const chip = (active: boolean) =>
@@ -87,8 +120,12 @@ export default function MealBuilderSheet() {
     <Sheet zIndex={65} onScrim={close} scroll maxHeight="94%">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
         <div>
-          <div style={{ font: "700 18px 'Bricolage Grotesque'", color: COLORS.ink }}>Build a meal</div>
-          <div style={{ font: '500 11.5px Figtree', color: ink(0.5) }}>Combine foods and save it to reuse.</div>
+          <div style={{ font: "700 18px 'Bricolage Grotesque'", color: COLORS.ink }}>
+            {editing ? 'Edit meal' : 'Build a meal'}
+          </div>
+          <div style={{ font: '500 11.5px Figtree', color: ink(0.5) }}>
+            {editing ? 'Add or remove foods — macros update automatically.' : 'Combine foods and save it to reuse.'}
+          </div>
         </div>
         <CloseButton onClick={close} />
       </div>
@@ -273,7 +310,7 @@ export default function MealBuilderSheet() {
           cursor: canSave ? 'pointer' : 'default',
         }}
       >
-        Save meal
+        {editing ? 'Save changes' : 'Save meal'}
       </div>
     </Sheet>
   )

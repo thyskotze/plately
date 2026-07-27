@@ -2,26 +2,8 @@ import { useRef, useState } from 'react'
 import { useStore } from '../../store'
 import { COLORS, ink } from '../../tokens'
 import Sheet, { CloseButton } from '../Sheet'
-import { Download, Upload, Star, Refresh, Utensils } from '../../icons'
-
-// Force-fetch the latest deployed version. Clears the service-worker cache and
-// reloads — keeps localStorage, so no user data is lost. Useful for the
-// installed (home-screen) PWA where pull-to-refresh isn't available.
-async function forceUpdate() {
-  try {
-    if ('serviceWorker' in navigator) {
-      const regs = await navigator.serviceWorker.getRegistrations()
-      await Promise.all(regs.map((r) => r.unregister()))
-    }
-    if (window.caches) {
-      const keys = await caches.keys()
-      await Promise.all(keys.map((k) => caches.delete(k)))
-    }
-  } catch {
-    /* best effort */
-  }
-  window.location.reload()
-}
+import { Download, Upload, Star, Refresh, Utensils, Share } from '../../icons'
+import { forceUpdate } from '../../lib/update'
 
 export default function ProfileSheet() {
   const show = useStore((s) => s.overlay === 'profile')
@@ -30,14 +12,31 @@ export default function ProfileSheet() {
   const openSlots = useStore((s) => s.openSlots)
   const openHelp = useStore((s) => s.openHelp)
   const exportBackup = useStore((s) => s.exportBackup)
+  const exportLibrary = useStore((s) => s.exportLibrary)
   const importBackup = useStore((s) => s.importBackup)
   const reopenIntro = useStore((s) => s.reopenIntro)
+  const checkForUpdate = useStore((s) => s.checkForUpdate)
+  const showToast = useStore((s) => s.showToast)
 
   const fileRef = useRef<HTMLInputElement>(null)
   const [pending, setPending] = useState<string | null>(null)
   const [err, setErr] = useState<string | null>(null)
+  // 'idle' | 'checking' | 'prompt' (new version found, asking to export first)
+  const [updateState, setUpdateState] = useState<'idle' | 'checking' | 'prompt'>('idle')
 
   if (!show) return null
+
+  const onCheckUpdate = async () => {
+    if (updateState === 'checking') return
+    setUpdateState('checking')
+    const isNew = await checkForUpdate()
+    if (isNew) {
+      setUpdateState('prompt')
+    } else {
+      setUpdateState('idle')
+      showToast('You’re on the latest version')
+    }
+  }
 
   const onFile = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -133,9 +132,15 @@ export default function ProfileSheet() {
           exportBackup,
         )}
         {rowBtn(
+          <Share size={18} color={COLORS.green} />,
+          'Share your library',
+          'Save your foods & your own meals as a file to send a friend. They open Import backup → Merge to add it to theirs.',
+          exportLibrary,
+        )}
+        {rowBtn(
           <Upload size={18} color={COLORS.green} />,
           'Import backup',
-          'Restore from a backup file. Choose Merge to add to what’s here, or Replace to overwrite.',
+          'Restore a backup — or add a library a friend shared. Choose Merge to add to what’s here, or Replace to overwrite.',
           () => fileRef.current?.click(),
         )}
         {rowBtn(
@@ -156,10 +161,76 @@ export default function ProfileSheet() {
         {rowBtn(
           <Refresh size={18} color={COLORS.green} />,
           'Check for updates',
-          'Fetch the latest version of the app (your data is kept).',
-          forceUpdate,
+          updateState === 'checking'
+            ? 'Checking…'
+            : 'See if a newer version is available (your data is kept).',
+          onCheckUpdate,
         )}
       </div>
+
+      {updateState === 'prompt' && (
+        <div
+          style={{
+            marginTop: 14,
+            background: '#fff',
+            border: `1px solid ${COLORS.cardBorder}`,
+            borderRadius: 14,
+            padding: 14,
+          }}
+        >
+          <div style={{ font: '700 12.5px Figtree', color: COLORS.ink, marginBottom: 4 }}>
+            A new version is available
+          </div>
+          <div style={{ font: '500 11px/1.5 Figtree', color: ink(0.6), marginBottom: 12 }}>
+            Updating keeps your data on this device — but export a backup first, just in case.
+          </div>
+          <div style={{ display: 'flex', gap: 8 }}>
+            <div
+              onClick={exportBackup}
+              style={{
+                flex: 1,
+                textAlign: 'center',
+                padding: 11,
+                borderRadius: 12,
+                background: '#fff',
+                border: `1px solid ${COLORS.inputBorder}`,
+                font: '700 12px Figtree',
+                color: COLORS.ink,
+                cursor: 'pointer',
+              }}
+            >
+              Export backup
+            </div>
+            <div
+              onClick={() => forceUpdate()}
+              style={{
+                flex: 1,
+                textAlign: 'center',
+                padding: 11,
+                borderRadius: 12,
+                background: COLORS.green,
+                font: '700 12px Figtree',
+                color: '#fff',
+                cursor: 'pointer',
+              }}
+            >
+              Update now
+            </div>
+          </div>
+          <div
+            onClick={() => setUpdateState('idle')}
+            style={{
+              textAlign: 'center',
+              marginTop: 8,
+              font: '600 11px Figtree',
+              color: ink(0.45),
+              cursor: 'pointer',
+            }}
+          >
+            Not now
+          </div>
+        </div>
+      )}
 
       <input ref={fileRef} type="file" accept="application/json,.json" onChange={onFile} style={{ display: 'none' }} />
 
