@@ -21,6 +21,7 @@ import CnfSearchSheet from './components/overlays/CnfSearchSheet'
 import BarcodeSheet from './components/overlays/BarcodeSheet'
 import MealBuilderSheet from './components/overlays/MealBuilderSheet'
 import MealSlotsSheet from './components/overlays/MealSlotsSheet'
+import HelpSheet from './components/overlays/HelpSheet'
 import InfoModal from './components/overlays/InfoModal'
 import Toast from './components/overlays/Toast'
 
@@ -110,6 +111,7 @@ export default function App() {
           <BarcodeSheet />
           <MealBuilderSheet />
           <MealSlotsSheet />
+          <HelpSheet />
           <InfoModal />
           <Toast />
 

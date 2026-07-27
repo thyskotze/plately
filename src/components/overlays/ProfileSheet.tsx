@@ -28,6 +28,7 @@ export default function ProfileSheet() {
   const close = useStore((s) => s.closeOverlay)
   const openGoals = useStore((s) => s.openGoals)
   const openSlots = useStore((s) => s.openSlots)
+  const openHelp = useStore((s) => s.openHelp)
   const exportBackup = useStore((s) => s.exportBackup)
   const importBackup = useStore((s) => s.importBackup)
   const reopenIntro = useStore((s) => s.reopenIntro)
@@ -139,8 +140,14 @@ export default function ProfileSheet() {
         )}
         {rowBtn(
           <span style={{ font: '700 15px Figtree', color: COLORS.green }}>?</span>,
-          'How to use',
-          'Replay the welcome walkthrough',
+          'Help & how-to',
+          'A quick manual for everything in Plately',
+          openHelp,
+        )}
+        {rowBtn(
+          <span style={{ font: '700 15px Figtree', color: COLORS.green }}>↻</span>,
+          'Replay walkthrough',
+          'Show the welcome intro again',
           () => {
             reopenIntro()
             close()

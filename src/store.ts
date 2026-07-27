@@ -49,6 +49,7 @@ export type Overlay =
   | 'barcode'
   | 'mealbuilder'
   | 'slots'
+  | 'help'
 
 export interface NewFoodDraft {
   name: string
@@ -145,6 +146,7 @@ export interface AppState extends PersistState, EphemeralState {
   }) => void
   // profile
   openProfile: () => void
+  openHelp: () => void
   // achievement sharing
   openShare: (card: ShareCard) => void
   // goals
@@ -288,6 +290,7 @@ export const useStore = create<AppState>()(
         set({ overlay: 'none', info: null, editRef: null, editFoodId: null, shareData: null }),
 
       openProfile: () => set({ overlay: 'profile' }),
+      openHelp: () => set({ overlay: 'help' }),
       openShare: (card) => set({ overlay: 'share', shareData: card }),
 
       completeOnboarding: (data) => {
