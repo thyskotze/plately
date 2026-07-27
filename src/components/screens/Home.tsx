@@ -22,6 +22,7 @@ export default function Home() {
   const toggleEaten = useStore((s) => s.toggleEaten)
   const openShare = useStore((s) => s.openShare)
   const openSlots = useStore((s) => s.openSlots)
+  const saveSlotAsMeal = useStore((s) => s.saveSlotAsMeal)
 
   const firstName = name.trim().split(' ')[0] || 'there'
   const initial = (name.trim()[0] || 'P').toUpperCase()
@@ -452,6 +453,32 @@ export default function Home() {
                   <ChevronRight size={13} color="#C9C1B2" strokeWidth={2.4} />
                 </div>
               ))}
+              {hasItems && (
+                <div
+                  style={{
+                    display: 'flex',
+                    justifyContent: 'flex-end',
+                    marginTop: 10,
+                    paddingTop: 9,
+                    borderTop: '1px solid #F1ECE1',
+                  }}
+                >
+                  <div
+                    onClick={() => saveSlotAsMeal(TODAY, key)}
+                    style={{
+                      display: 'inline-flex',
+                      alignItems: 'center',
+                      gap: 5,
+                      cursor: 'pointer',
+                      font: '700 11px Figtree',
+                      color: '#2E9E5B',
+                    }}
+                  >
+                    <Utensils size={13} color="#2E9E5B" />
+                    Save as a meal
+                  </div>
+                </div>
+              )}
             </div>
           )
         })}

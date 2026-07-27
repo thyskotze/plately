@@ -16,6 +16,7 @@ import type {
   SlotKey,
   MealSlot,
   Category,
+  MealItem,
 } from './types'
 import { isMealPortion, DEFAULT_SLOTS } from './types'
 import { SEED_FOODS } from './seed'
@@ -122,6 +123,8 @@ interface EphemeralState {
   editFoodId: string | null
   // editing an existing built meal (null = building a new one)
   editMealId: string | null
+  // pre-fill for the meal builder when saving a logged day-slot as a new meal
+  builderSeed: { name: string; section: 'breakfast' | 'lunch' | 'dinner'; items: MealItem[] } | null
   // input for weight
   wInput: string
   // info modal
@@ -185,6 +188,8 @@ export interface AppState extends PersistState, EphemeralState {
   openEditMeal: (id: string) => void
   updateBuiltMeal: (id: string, meal: Meal) => void
   deleteMeal: (id: string) => void
+  /** Turn the foods already logged in a day-slot into a new reusable meal. */
+  saveSlotAsMeal: (day: number, slot: SlotKey) => void
   // planner
   selectDay: (i: number) => void
   // shopping
@@ -274,6 +279,7 @@ const initialEphemeral: EphemeralState = {
   editRef: null,
   editFoodId: null,
   editMealId: null,
+  builderSeed: null,
   wInput: '',
   info: null,
   shareData: null,
@@ -310,6 +316,7 @@ export const useStore = create<AppState>()(
           editRef: null,
           editFoodId: null,
           editMealId: null,
+          builderSeed: null,
           shareData: null,
         }),
 
@@ -512,13 +519,13 @@ export const useStore = create<AppState>()(
         set({ mealsByDay: mb, overlay: 'none', xp: Math.min(s.xpMax, s.xp + 15) })
         s.showToast(`${meal?.name ?? 'Meal'} added  +15 XP`)
       },
-      openMealBuilder: () => set({ overlay: 'mealbuilder', editMealId: null }),
+      openMealBuilder: () => set({ overlay: 'mealbuilder', editMealId: null, builderSeed: null }),
       addBuiltMeal: (meal) => {
         const s = get()
-        set({ meals: [meal, ...s.meals], overlay: 'none' })
+        set({ meals: [meal, ...s.meals], overlay: 'none', builderSeed: null })
         s.showToast(`${meal.name} saved to meals`)
       },
-      openEditMeal: (id) => set({ overlay: 'mealbuilder', editMealId: id }),
+      openEditMeal: (id) => set({ overlay: 'mealbuilder', editMealId: id, builderSeed: null }),
       updateBuiltMeal: (id, meal) => {
         const s = get()
         set({
@@ -527,6 +534,40 @@ export const useStore = create<AppState>()(
           editMealId: null,
         })
         s.showToast(`${meal.name} updated`)
+      },
+      saveSlotAsMeal: (day, slot) => {
+        const s = get()
+        const portions = s.mealsByDay[day]?.[slot] || []
+        // Collapse the slot's logged portions into a food→grams list. Food
+        // portions map directly; saved-meal portions expand via their items
+        // (grams × servings). Seed meals without items can't be expanded.
+        const byFood = new Map<string, number>()
+        portions.forEach((p) => {
+          if (isMealPortion(p)) {
+            const meal = s.meals.find((m) => m.id === p.mealId)
+            meal?.items?.forEach((it) =>
+              byFood.set(it.foodId, (byFood.get(it.foodId) || 0) + it.grams * p.servings),
+            )
+          } else {
+            byFood.set(p.foodId, (byFood.get(p.foodId) || 0) + p.grams)
+          }
+        })
+        const items: MealItem[] = Array.from(byFood, ([foodId, grams]) => ({
+          foodId,
+          grams: Math.round(grams * 10) / 10,
+        }))
+        if (!items.length) {
+          s.showToast('Add some foods to this meal first')
+          return
+        }
+        const label = s.mealSlots.find((m) => m.key === slot)?.label || 'Meal'
+        const l = label.toLowerCase()
+        const section: 'breakfast' | 'lunch' | 'dinner' = l.includes('break')
+          ? 'breakfast'
+          : l.includes('din')
+            ? 'dinner'
+            : 'lunch'
+        set({ overlay: 'mealbuilder', editMealId: null, builderSeed: { name: label, section, items } })
       },
       deleteMeal: (id) => {
         const s = get()

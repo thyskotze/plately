@@ -32,6 +32,7 @@ export default function MealBuilderSheet() {
   const foods = useStore((s) => s.foods)
   const meals = useStore((s) => s.meals)
   const editMealId = useStore((s) => s.editMealId)
+  const builderSeed = useStore((s) => s.builderSeed)
   const addBuiltMeal = useStore((s) => s.addBuiltMeal)
   const updateBuiltMeal = useStore((s) => s.updateBuiltMeal)
   const close = useStore((s) => s.closeOverlay)
@@ -41,7 +42,8 @@ export default function MealBuilderSheet() {
   const [items, setItems] = useState<MealItem[]>([])
   const [q, setQ] = useState('')
 
-  // Prefill from the meal when opening in edit mode; start blank otherwise.
+  // Prefill on open: from an existing meal (edit), from a logged slot (seed),
+  // or blank (fresh build).
   useEffect(() => {
     if (!show) return
     if (editMealId) {
@@ -54,17 +56,25 @@ export default function MealBuilderSheet() {
         return
       }
     }
+    if (builderSeed) {
+      setName(builderSeed.name)
+      setSection(builderSeed.section)
+      setItems(builderSeed.items)
+      setQ('')
+      return
+    }
     setName('')
     setSection('lunch')
     setItems([])
     setQ('')
     // Load once per open / target change; foods/meals are read as a snapshot.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [show, editMealId])
+  }, [show, editMealId, builderSeed])
 
   if (!show) return null
 
   const editing = !!editMealId
+  const fromSlot = !editing && !!builderSeed
 
   const totals = items.reduce(
     (acc, it) => {
@@ -121,10 +131,14 @@ export default function MealBuilderSheet() {
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 12 }}>
         <div>
           <div style={{ font: "700 18px 'Bricolage Grotesque'", color: COLORS.ink }}>
-            {editing ? 'Edit meal' : 'Build a meal'}
+            {editing ? 'Edit meal' : fromSlot ? 'Save as a meal' : 'Build a meal'}
           </div>
           <div style={{ font: '500 11.5px Figtree', color: ink(0.5) }}>
-            {editing ? 'Add or remove foods — macros update automatically.' : 'Combine foods and save it to reuse.'}
+            {editing
+              ? 'Add or remove foods — macros update automatically.'
+              : fromSlot
+                ? 'Pulled from your logged foods — name it and save.'
+                : 'Combine foods and save it to reuse.'}
           </div>
         </div>
         <CloseButton onClick={close} />
