@@ -5,6 +5,16 @@
 /** The build this running bundle was compiled from. */
 export const BUILD_ID: string = __BUILD_ID__
 
+/** App version from package.json (bumped on notable releases). Shown in Profile. */
+export const APP_VERSION: string = __APP_VERSION__
+
+/** "Jul 28, 2026" — a human-readable stamp of BUILD_ID for display. */
+export function buildDateLabel(): string {
+  const d = new Date(BUILD_ID)
+  if (Number.isNaN(d.getTime())) return ''
+  return d.toLocaleDateString(undefined, { month: 'short', day: 'numeric', year: 'numeric' })
+}
+
 /**
  * Fetch the buildId of whatever is currently deployed. Returns null if it can't
  * be reached (offline, or dev where version.json isn't emitted) so callers

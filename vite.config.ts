@@ -1,6 +1,11 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
+import pkg from './package.json'
+
+// The version shown in Profile ("Plately v2.0.0"). Bump this in package.json
+// on notable releases.
+const APP_VERSION = pkg.version
 
 // GitHub Pages serves the app from https://<user>.github.io/<repo>/.
 // In GitHub Actions, GITHUB_REPOSITORY is "owner/repo"; derive the base path and
@@ -44,6 +49,7 @@ export default defineConfig({
   define: {
     __BUILD_ID__: JSON.stringify(BUILD_ID),
     __STORAGE_KEY__: JSON.stringify(STORAGE_KEY),
+    __APP_VERSION__: JSON.stringify(APP_VERSION),
   },
   plugins: [
     react(),

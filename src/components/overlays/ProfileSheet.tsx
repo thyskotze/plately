@@ -3,7 +3,7 @@ import { useStore } from '../../store'
 import { COLORS, ink } from '../../tokens'
 import Sheet, { CloseButton } from '../Sheet'
 import { Download, Upload, Star, Refresh, Utensils, Share } from '../../icons'
-import { forceUpdate } from '../../lib/update'
+import { forceUpdate, APP_VERSION, buildDateLabel } from '../../lib/update'
 
 export default function ProfileSheet() {
   const show = useStore((s) => s.overlay === 'profile')
@@ -296,6 +296,17 @@ export default function ProfileSheet() {
         }}
       >
         Your data lives only on this device. Export a backup now and then so you don’t lose it.
+      </div>
+      <div
+        style={{
+          marginTop: 8,
+          font: '600 10.5px Figtree, sans-serif',
+          color: ink(0.32),
+          textAlign: 'center',
+        }}
+      >
+        Plately v{APP_VERSION}
+        {buildDateLabel() ? ` · ${buildDateLabel()}` : ''}
       </div>
     </Sheet>
   )
