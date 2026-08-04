@@ -2,8 +2,9 @@ import { useStore } from '../../store'
 import { ink } from '../../tokens'
 import { sparkline, eatenTotals, round } from '../../lib/calc'
 import { computeStreak } from '../../lib/streak'
-import { todayISO } from '../../lib/dates'
+import { todayISO, weekDates, startOfWeek } from '../../lib/dates'
 import { Flame, Star, Share } from '../../icons'
+import ConsumptionSummary from '../ConsumptionSummary'
 
 export default function Stats() {
   const weights = useStore((s) => s.weights)
@@ -21,19 +22,25 @@ export default function Stats() {
   const goals = useStore((s) => s.goals)
   const openShare = useStore((s) => s.openShare)
 
-  const streak = computeStreak(foods, meals, mealsByDay, eaten, goals.kcal, todayISO())
+  const today = todayISO()
+  const streak = computeStreak(foods, meals, mealsByDay, eaten, goals.kcal, today)
 
   const kgs = weights.map((w) => w.kg)
-  const sp = sparkline(kgs)
-  const totd = kgs[kgs.length - 1] - kgs[0]
+  const hasWeights = kgs.length > 0
+  const sp = sparkline(hasWeights ? kgs : [0])
+  const latestKg = hasWeights ? kgs[kgs.length - 1] : 0
+  const totd = hasWeights ? latestKg - kgs[0] : 0
 
   // Weekly achievement: a day is "perfect" once its eaten calories reach the goal.
-  const dayHit = Array.from({ length: 7 }, (_, i) =>
-    goals.kcal > 0 && eatenTotals(foods, meals, mealsByDay[i], eaten[i]).kcal >= goals.kcal,
+  const week = weekDates(startOfWeek(today))
+  const dayHit = week.map(
+    (date) =>
+      goals.kcal > 0 &&
+      eatenTotals(foods, meals, mealsByDay[date], eaten[date]).kcal >= goals.kcal,
   )
   const perfectDays = dayHit.filter(Boolean).length
   const perfectWeek = perfectDays === 7
-  const todayPerfect = dayHit[1]
+  const todayPerfect = dayHit[week.indexOf(today)] ?? false
 
   const shareWeek = () =>
     openShare({
@@ -93,20 +100,22 @@ export default function Stats() {
           }}
         >
           <div style={{ font: '600 12.5px Figtree', color: ink(0.55) }}>Weight</div>
-          <div
-            style={{
-              font: '600 11.5px Figtree',
-              color: totd <= 0 ? '#2E9E5B' : '#E4572E',
-            }}
-          >
-            {totd <= 0 ? '' : '+'}
-            {totd.toFixed(1)} kg this month
-          </div>
+          {hasWeights && (
+            <div
+              style={{
+                font: '600 11.5px Figtree',
+                color: totd <= 0 ? '#2E9E5B' : '#E4572E',
+              }}
+            >
+              {totd <= 0 ? '' : '+'}
+              {totd.toFixed(1)} kg this month
+            </div>
+          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'baseline', gap: 6, marginBottom: 10 }}>
           <div style={{ font: "700 34px 'Space Grotesk'", color: '#1a1a17' }}>
-            {kgs[kgs.length - 1]}
+            {hasWeights ? latestKg : '—'}
           </div>
           <div style={{ font: '600 14px Figtree', color: ink(0.4) }}>kg</div>
           <div style={{ marginLeft: 'auto', font: '500 11.5px Figtree', color: ink(0.4) }}>
@@ -161,6 +170,8 @@ export default function Stats() {
           </div>
         </div>
       </div>
+
+      <ConsumptionSummary />
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
         <div
