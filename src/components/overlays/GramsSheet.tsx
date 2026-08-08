@@ -1,6 +1,6 @@
 import { useStore } from '../../store'
 import { todayISO, relativeLabel } from '../../lib/dates'
-import { round, foodById, toNum } from '../../lib/calc'
+import { round, foodById, toNum, frequentPortions } from '../../lib/calc'
 import { COLORS, ink } from '../../tokens'
 import { Minus, Plus } from '../../icons'
 import Sheet from '../Sheet'
@@ -13,6 +13,7 @@ export default function GramsSheet() {
   const pickSlot = useStore((s) => s.pickSlot)
   const pickDate = useStore((s) => s.pickDate)
   const mealSlots = useStore((s) => s.mealSlots)
+  const mealsByDay = useStore((s) => s.mealsByDay)
   const gStep = useStore((s) => s.gStep)
   const gSet = useStore((s) => s.gSet)
   const confirmGrams = useStore((s) => s.confirmGrams)
@@ -89,28 +90,62 @@ export default function GramsSheet() {
           <Plus size={20} color={COLORS.ink} />
         </div>
       </div>
-      <div style={{ display: 'flex', justifyContent: 'center', gap: 6, marginBottom: 16 }}>
-        {[5, 15, 50, 100, 150].map((x) => {
-          const c = chip(x === gVal)
-          return (
-            <div
-              key={x}
-              onClick={() => gSet(x)}
-              style={{
-                padding: '6px 10px',
-                borderRadius: 999,
-                background: c.background,
-                border: c.border,
-                font: '600 11.5px Figtree',
-                color: c.color,
-                cursor: 'pointer',
-              }}
-            >
-              {x}g
-            </div>
-          )
-        })}
-      </div>
+      {/* Presets: the food's own servings, then amounts you keep using, then
+          plain fallbacks — deduped so nothing repeats. */}
+      {(() => {
+        const named = (food.servings || []).map((s) => ({
+          key: 'n' + s.label + s.grams,
+          grams: s.grams,
+          label: s.label,
+          sub: `${s.grams}g`,
+        }))
+        const used = frequentPortions(mealsByDay, food.id).map((u) => ({
+          key: 'u' + u.grams,
+          grams: u.grams,
+          label: `${u.grams}g`,
+          sub: `used ${u.count}×`,
+        }))
+        const taken = new Set([...named, ...used].map((x) => x.grams))
+        const plain = [50, 100, 150]
+          .filter((g) => !taken.has(g))
+          .map((g) => ({ key: 'p' + g, grams: g, label: `${g}g`, sub: '' }))
+        const presets = [...named, ...used, ...plain].slice(0, 6)
+        if (!presets.length) return null
+        return (
+          <div
+            style={{
+              display: 'flex',
+              flexWrap: 'wrap',
+              justifyContent: 'center',
+              gap: 6,
+              marginBottom: 16,
+            }}
+          >
+            {presets.map((p) => {
+              const c = chip(p.grams === gVal)
+              return (
+                <div
+                  key={p.key}
+                  onClick={() => gSet(p.grams)}
+                  style={{
+                    padding: p.sub ? '5px 11px' : '6px 11px',
+                    borderRadius: 999,
+                    background: c.background,
+                    border: c.border,
+                    color: c.color,
+                    cursor: 'pointer',
+                    textAlign: 'center',
+                    lineHeight: 1.15,
+                  }}
+                >
+                  <div style={{ font: '600 11.5px Figtree' }}>{p.label}</div>
+                  {p.sub && <div style={{ font: '500 9px Figtree', opacity: 0.7 }}>{p.sub}</div>}
+                </div>
+              )
+            })}
+          </div>
+        )
+      })()}
       <div style={{ display: 'flex', gap: 8, marginBottom: 18 }}>
         <div
           style={{ flex: 1, textAlign: 'center', background: '#EAF5EE', borderRadius: 12, padding: '9px 4px' }}

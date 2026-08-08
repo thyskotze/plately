@@ -22,7 +22,7 @@ import { isMealPortion, DEFAULT_SLOTS } from './types'
 import { SEED_FOODS } from './seed'
 import { SEED_MEALS_LIB } from './seedMeals'
 import { EXTRA_FOODS } from './seedFoodsExtra'
-import { suggestKcal, suggestMacros, deriveMacros, toNum } from './lib/calc'
+import { suggestKcal, suggestMacros, deriveMacros, toNum, frequentPortions } from './lib/calc'
 import { isUpdateAvailable } from './lib/update'
 import { todayISO, addDays, remapWeekKeys, type ISODate } from './lib/dates'
 import type { ShareCard } from './lib/share'
@@ -112,6 +112,8 @@ interface EphemeralState {
   editRef: { date: ISODate; slot: SlotKey; idx: number } | null
   // calendar selected day (Planner)
   selDate: ISODate
+  // barcode scan was started from "add to a meal", so finish at the portion step
+  barcodeToSlot: boolean
   // editing an existing library food (null = creating a new one)
   editFoodId: string | null
   // editing an existing built meal (null = building a new one)
@@ -209,7 +211,8 @@ export interface AppState extends PersistState, EphemeralState {
   openCnfSearch: () => void
   addImportedFood: (food: Food) => void
   // barcode scanning
-  openBarcodeScan: () => void
+  /** `toSlot` = scanning while adding to a meal: jump to the portion step after. */
+  openBarcodeScan: (toSlot?: boolean) => void
   // ai import
   openAiImport: () => void
   aiNext: () => void
@@ -258,6 +261,7 @@ const initialEphemeral: EphemeralState = {
   overlay: 'none',
   pickDate: todayISO(),
   selDate: todayISO(),
+  barcodeToSlot: false,
   pickSlot: 'snacks',
   pickSearch: '',
   pickTab: 'foods',
@@ -312,6 +316,7 @@ export const useStore = create<AppState>()(
           editMealId: null,
           builderSeed: null,
           shareData: null,
+          barcodeToSlot: false,
         }),
 
       openProfile: () => set({ overlay: 'profile' }),
@@ -409,8 +414,15 @@ export const useStore = create<AppState>()(
       },
       setPickSearch: (v) => set({ pickSearch: v }),
       setPickTab: (tab) => set({ pickTab: tab }),
-      chooseFood: (id) =>
-        set({ overlay: 'grams', chosenId: id, gVal: 100, editRef: null }),
+      chooseFood: (id) => {
+        // Start at the food's usual portion when it has one (a scanned pack
+        // size, an AI-suggested serving, or the amount you keep logging).
+        const s = get()
+        const food = s.foods.find((f) => f.id === id)
+        const used = frequentPortions(s.mealsByDay, id, 1)[0]
+        const gVal = food?.servings?.[0]?.grams ?? used?.grams ?? 100
+        set({ overlay: 'grams', chosenId: id, gVal, editRef: null })
+      },
       gStep: (d) => set((s) => ({ gVal: Math.max(0, s.gVal + d) })),
       gSet: (v) => set({ gVal: v }),
       confirmGrams: () => {
@@ -738,7 +750,7 @@ export const useStore = create<AppState>()(
       openInfo: (kind) => set({ overlay: 'info', info: INFO_MAP[kind] }),
 
       openCnfSearch: () => set({ overlay: 'cnfsearch' }),
-      openBarcodeScan: () => set({ overlay: 'barcode' }),
+      openBarcodeScan: (toSlot = false) => set({ overlay: 'barcode', barcodeToSlot: toSlot }),
       addImportedFood: (food) => {
         const s = get()
         // Dedupe by id so re-adding the same CNF food doesn't pile up.

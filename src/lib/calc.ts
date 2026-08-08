@@ -7,6 +7,7 @@ import type {
   GoalsDraft,
   Category,
   SlotKey,
+  Serving,
 } from '../types'
 import { CATEGORIES, isMealPortion } from '../types'
 import { CAT_COLORS } from '../tokens'
@@ -281,6 +282,53 @@ export function findSimilarFood(foods: Food[], name: string): Food | undefined {
   return best
 }
 
+/**
+ * Parse a servings field like "Bottle 250g; Glass 200 ml" into named portions.
+ * Anything unparseable is skipped rather than guessed.
+ */
+export function parseServings(raw: string): Serving[] {
+  const out: Serving[] = []
+  ;(raw || '')
+    .split(/[;,]/)
+    .map((s) => s.trim())
+    .filter(Boolean)
+    .forEach((entry) => {
+      const m = /^(.*?)\s*([\d.,]+)\s*(?:g|ml|grams?|millilitres?)?$/i.exec(entry)
+      if (!m) return
+      const grams = toNum(m[2])
+      if (!grams || grams <= 0) return
+      const label = m[1].trim().replace(/[-–—:]$/, '').trim() || `${grams} g`
+      out.push({ label, grams: Math.round(grams * 10) / 10 })
+    })
+  return out.slice(0, 4)
+}
+
+/**
+ * The amounts this food has actually been logged at, most-used first. Derived
+ * from the meal history so it needs no extra stored state and can't drift.
+ */
+export function frequentPortions(
+  mealsByDay: MealsByDay,
+  foodId: string,
+  limit = 3,
+): { grams: number; count: number }[] {
+  const counts = new Map<number, number>()
+  Object.keys(mealsByDay || {}).forEach((date) => {
+    const day = mealsByDay[date]
+    Object.keys(day || {}).forEach((slot) => {
+      ;(day[slot] || []).forEach((p) => {
+        if (isMealPortion(p) || p.foodId !== foodId) return
+        counts.set(p.grams, (counts.get(p.grams) || 0) + 1)
+      })
+    })
+  })
+  return [...counts.entries()]
+    .map(([grams, count]) => ({ grams, count }))
+    .filter((x) => x.count > 1) // one-offs aren't habits
+    .sort((a, b) => b.count - a.count || b.grams - a.grams)
+    .slice(0, limit)
+}
+
 /** Parse the AI bulk-import text. Rules ported verbatim from the prototype. */
 export function parseAi(text: string): Food[] {
   const cats = CATEGORIES as readonly string[]
@@ -293,10 +341,12 @@ export function parseAi(text: string): Food[] {
     let name: string
     let cat: string
     let nums: number[]
+    let servingsRaw = ''
     if (parts.length >= 6) {
       name = parts[0]
       cat = parts[1]
       nums = parts.slice(2, 6).map(Number)
+      servingsRaw = parts[6] || ''
     } else if (parts.length === 5) {
       name = parts[0]
       cat = 'Other'
@@ -309,6 +359,7 @@ export function parseAi(text: string): Food[] {
       const hit = cats.find((c) => c.toLowerCase() === String(cat).toLowerCase())
       cat = hit || 'Other'
     }
+    const servings = parseServings(servingsRaw)
     out.push({
       id: 'ai' + Math.random().toString(36).slice(2, 8),
       name,
@@ -317,6 +368,7 @@ export function parseAi(text: string): Food[] {
       p: nums[1],
       c: nums[2],
       f: nums[3],
+      ...(servings.length ? { servings } : {}),
     })
   })
   return out

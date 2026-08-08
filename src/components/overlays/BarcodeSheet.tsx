@@ -9,6 +9,8 @@ export default function BarcodeSheet() {
   const show = useStore((s) => s.overlay === 'barcode')
   const close = useStore((s) => s.closeOverlay)
   const addImportedFood = useStore((s) => s.addImportedFood)
+  const barcodeToSlot = useStore((s) => s.barcodeToSlot)
+  const chooseFood = useStore((s) => s.chooseFood)
 
   const videoRef = useRef<HTMLVideoElement>(null)
   const controlsRef = useRef<IScannerControls | null>(null)
@@ -29,7 +31,10 @@ export default function BarcodeSheet() {
         return
       }
       addImportedFood(food)
-      close()
+      // Scanning while adding to a meal: go straight to the portion step, which
+      // keeps the day/slot we were adding to.
+      if (barcodeToSlot) chooseFood(food.id)
+      else close()
     } catch {
       setStatus("Couldn't reach Open Food Facts. Check your connection.")
     } finally {

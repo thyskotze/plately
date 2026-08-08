@@ -26,6 +26,12 @@ export const DEFAULT_SLOTS: MealSlot[] = [
   { key: 'snacks', label: 'Snacks' },
 ]
 
+/** A named portion of a food, e.g. { label: 'Bottle', grams: 250 }. */
+export interface Serving {
+  label: string
+  grams: number
+}
+
 /** A food, macros expressed per 100 g (or per 100 ml for liquids). */
 export interface Food {
   id: string
@@ -35,6 +41,11 @@ export interface Food {
   p: number
   c: number
   f: number
+  /**
+   * Typical portions for this food — from an AI import or a scanned product's
+   * label. Offered as one-tap presets when logging. Optional everywhere.
+   */
+  servings?: Serving[]
 }
 
 /** A saved meal / recipe with per-serving macros. */

@@ -2,7 +2,7 @@ import { useStore } from '../../store'
 import { todayISO, relativeLabel } from '../../lib/dates'
 import { tag, macroLine, round } from '../../lib/calc'
 import { COLORS, ink } from '../../tokens'
-import { Search } from '../../icons'
+import { Search, Barcode } from '../../icons'
 import Sheet, { CloseButton } from '../Sheet'
 
 export default function PickSheet() {
@@ -19,6 +19,7 @@ export default function PickSheet() {
   const chooseFood = useStore((s) => s.chooseFood)
   const chooseMeal = useStore((s) => s.chooseMeal)
   const closeOverlay = useStore((s) => s.closeOverlay)
+  const openBarcodeScan = useStore((s) => s.openBarcodeScan)
 
   if (!show) return null
 
@@ -116,9 +117,30 @@ export default function PickSheet() {
         />
       </div>
 
+      {pickTab === 'foods' && (
+        <div
+          onClick={() => openBarcodeScan(true)}
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            gap: 8,
+            background: '#fff',
+            border: `1px solid ${COLORS.cardBorder}`,
+            borderRadius: 12,
+            padding: '10px 12px',
+            marginBottom: 12,
+            cursor: 'pointer',
+          }}
+        >
+          <Barcode />
+          <span style={{ font: '700 12px Figtree', color: COLORS.green }}>Scan a barcode</span>
+        </div>
+      )}
+
       <div
         className="noscroll"
-        style={{ overflowY: 'auto', maxHeight: '52vh', display: 'flex', flexDirection: 'column', gap: 7 }}
+        style={{ overflowY: 'auto', maxHeight: '46vh', display: 'flex', flexDirection: 'column', gap: 7 }}
       >
         {pickTab === 'foods'
           ? foodList.map((f) => {

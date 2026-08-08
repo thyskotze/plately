@@ -75,10 +75,15 @@ STEP 3 — Answer
 Output ONLY the list, one food per line, in exactly this format.
 No header, no bullets, no notes, no units, no ranges:
 
-Name | Category | calories | protein | carbs | fat
+Name | Category | calories | protein | carbs | fat | servings
 
 Category must be one of: Produce, Meat & Fish, Dairy & Eggs,
 Bakery, Pantry, Frozen, Other.
+
+"servings" is how this food is normally eaten — 1 to 3 typical portions,
+separated by semicolons, each as "Label 250g". Use the pack size when there
+is one. Example: Bottle 250g; Glass 200g
+If you have no sensible serving, leave the field empty but keep the | before it.
 
 After the list, if anything was uncertain, add lines like:
 UNSURE: white bread — need the brand or the label photo

@@ -154,7 +154,7 @@ export default function Library() {
           </div>
 
           <div style={{ display: 'flex', gap: 7, marginBottom: 16 }}>
-            <div onClick={openBarcodeScan} style={chipStyle}>
+            <div onClick={() => openBarcodeScan()} style={chipStyle}>
               <Barcode />
               <span style={chipLabel}>Scan barcode</span>
             </div>
