@@ -29,7 +29,8 @@ export default function Onboarding() {
         sex,
         activity,
         goal: goalDir,
-        kcal: '',
+        kcalMin: '',
+        kcalMax: '',
         p: '',
       })
     : 0

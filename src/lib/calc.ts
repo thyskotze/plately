@@ -5,6 +5,7 @@ import type {
   DayMeals,
   MealsByDay,
   GoalsDraft,
+  Goals,
   Category,
   SlotKey,
   Serving,
@@ -131,6 +132,46 @@ export function eatenTotals(
 
 export function dayTotals(foods: Food[], meals: Meal[], day: DayMeals | undefined): DayTotals {
   return portionsTotals(foods, meals, allPortions(day))
+}
+
+/**
+ * The calorie window a day should land in. Uses the explicit range when set;
+ * otherwise falls back to a band around the single target so goals saved
+ * before ranges existed still behave sensibly.
+ */
+export function kcalWindow(goals: Goals): { min: number; max: number } {
+  const target = goals.kcal || 0
+  const min = goals.kcalMin && goals.kcalMin > 0 ? goals.kcalMin : Math.round(target * 0.8)
+  const max = goals.kcalMax && goals.kcalMax > 0 ? goals.kcalMax : Math.round(target * 1.05)
+  return { min, max: Math.max(min, max) }
+}
+
+export interface DayScore {
+  /** Landed in the calorie window — this is what a "good day" means. */
+  onTarget: boolean
+  /** Ate more than the window's max. Counts against you, never for you. */
+  over: boolean
+  /** Ate less than the window's min. */
+  under: boolean
+  /** Nothing eaten yet. */
+  empty: boolean
+  /** Also hit the protein target — a bonus, never required. */
+  proteinHit: boolean
+}
+
+/** Score a day's *eaten* totals against the goal window. */
+export function scoreDay(totals: DayTotals, goals: Goals): DayScore {
+  const { min, max } = kcalWindow(goals)
+  const kcal = totals.kcal
+  const empty = kcal <= 0
+  const valid = (goals.kcal || 0) > 0
+  return {
+    onTarget: valid && !empty && kcal >= min && kcal <= max,
+    over: valid && kcal > max,
+    under: valid && !empty && kcal < min,
+    empty,
+    proteinHit: (goals.protein || 0) > 0 && totals.p >= goals.protein,
+  }
 }
 
 export const tag = (f: Food) => {

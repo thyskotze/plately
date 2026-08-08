@@ -90,7 +90,15 @@ export type DayMeals = Record<SlotKey, Portion[]>
 export type MealsByDay = Record<string, DayMeals>
 
 export interface Goals {
+  /** The mid-point target — drives the ring and the derived carb/fat split. */
   kcal: number
+  /**
+   * The calorie window a day should land in, e.g. a dietitian's "2300–2500".
+   * Optional: older goals without a range fall back to a band around `kcal`
+   * (see `kcalWindow`). Eating over the max counts against you, not for you.
+   */
+  kcalMin?: number
+  kcalMax?: number
   protein: number
   carbs: number
   fat: number
@@ -123,8 +131,9 @@ export interface GoalsDraft {
   sex: Sex
   activity: Activity
   goal: GoalDir
-  /** editable calorie goal (defaults to the TDEE suggestion) */
-  kcal: string
+  /** editable calorie window (defaults to the TDEE suggestion ±100) */
+  kcalMin: string
+  kcalMax: string
   /** editable protein goal in grams */
   p: string
 }

@@ -22,7 +22,14 @@ import { isMealPortion, DEFAULT_SLOTS } from './types'
 import { SEED_FOODS } from './seed'
 import { SEED_MEALS_LIB } from './seedMeals'
 import { EXTRA_FOODS } from './seedFoodsExtra'
-import { suggestKcal, suggestMacros, deriveMacros, toNum, frequentPortions } from './lib/calc'
+import {
+  suggestKcal,
+  suggestMacros,
+  deriveMacros,
+  toNum,
+  frequentPortions,
+  kcalWindow,
+} from './lib/calc'
 import { isUpdateAvailable } from './lib/update'
 import { todayISO, addDays, remapWeekKeys, type ISODate } from './lib/dates'
 import type { ShareCard } from './lib/share'
@@ -331,7 +338,8 @@ export const useStore = create<AppState>()(
           sex: data.sex,
           activity: data.activity,
           goal: data.goalDir,
-          kcal: '',
+          kcalMin: '',
+          kcalMax: '',
           p: '',
         }
         const kcal = suggestKcal(gl)
@@ -347,7 +355,8 @@ export const useStore = create<AppState>()(
             activity: data.activity,
             goalDir: data.goalDir,
           },
-          goals: { kcal, protein, carbs, fat },
+          // Start with a sensible ±100 kcal window around the suggestion.
+          goals: { kcal, kcalMin: kcal - 100, kcalMax: kcal + 100, protein, carbs, fat },
           weights: [{ label: 'Start', kg: data.weight }],
           weightGoal: Math.round(data.weight),
           onboarded: true,
@@ -367,7 +376,8 @@ export const useStore = create<AppState>()(
             sex: b.sex,
             activity: b.activity,
             goal: b.goalDir,
-            kcal: String(st.goals.kcal),
+            kcalMin: String(kcalWindow(st.goals).min),
+            kcalMax: String(kcalWindow(st.goals).max),
             p: String(st.goals.protein),
           },
         })
@@ -377,12 +387,24 @@ export const useStore = create<AppState>()(
       saveGoals: () => {
         const gl = get().gl
         if (!gl) return
-        const goalKcal = toNum(gl.kcal) || suggestKcal(gl)
+        // Accept a range; tolerate one side being blank or the pair reversed.
+        const suggestion = suggestKcal(gl)
+        let lo = toNum(gl.kcalMin)
+        let hi = toNum(gl.kcalMax)
+        if (!lo && !hi) {
+          lo = suggestion - 100
+          hi = suggestion + 100
+        } else if (!lo) lo = hi
+        else if (!hi) hi = lo
+        if (lo > hi) [lo, hi] = [hi, lo]
+        const goalKcal = Math.round((lo + hi) / 2)
         const goalProtein = toNum(gl.p)
         const derived = deriveMacros(goalKcal, goalProtein)
         set({
           goals: {
             kcal: goalKcal,
+            kcalMin: lo,
+            kcalMax: hi,
             protein: goalProtein,
             carbs: derived.carbs,
             fat: derived.fat,

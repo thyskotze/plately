@@ -1,6 +1,6 @@
 import { useStore } from '../../store'
 import { ink } from '../../tokens'
-import { sparkline, eatenTotals, round } from '../../lib/calc'
+import { sparkline, eatenTotals, round, scoreDay } from '../../lib/calc'
 import { computeStreak } from '../../lib/streak'
 import { todayISO, weekDates, startOfWeek } from '../../lib/dates'
 import { Flame, Star, Share } from '../../icons'
@@ -23,7 +23,7 @@ export default function Stats() {
   const openShare = useStore((s) => s.openShare)
 
   const today = todayISO()
-  const streak = computeStreak(foods, meals, mealsByDay, eaten, goals.kcal, today)
+  const streak = computeStreak(foods, meals, mealsByDay, eaten, goals, today)
 
   const kgs = weights.map((w) => w.kg)
   const hasWeights = kgs.length > 0
@@ -31,12 +31,11 @@ export default function Stats() {
   const latestKg = hasWeights ? kgs[kgs.length - 1] : 0
   const totd = hasWeights ? latestKg - kgs[0] : 0
 
-  // Weekly achievement: a day is "perfect" once its eaten calories reach the goal.
+  // Weekly achievement: a day is "perfect" when it lands inside the calorie
+  // window — going over doesn't count, same as falling short.
   const week = weekDates(startOfWeek(today))
   const dayHit = week.map(
-    (date) =>
-      goals.kcal > 0 &&
-      eatenTotals(foods, meals, mealsByDay[date], eaten[date]).kcal >= goals.kcal,
+    (date) => scoreDay(eatenTotals(foods, meals, mealsByDay[date], eaten[date]), goals).onTarget,
   )
   const perfectDays = dayHit.filter(Boolean).length
   const perfectWeek = perfectDays === 7
@@ -51,12 +50,12 @@ export default function Stats() {
       streak,
       dateLabel: 'This week',
       headline: perfectWeek ? 'Perfect week! 🏆' : 'Weekly progress',
-      sub: `${perfectDays}/7 days at 100%`,
+      sub: `${perfectDays}/7 days in range`,
       perfectDays,
     })
 
   const badges = [
-    { label: 'Perfect day', emoji: '🎯', earned: todayPerfect },
+    { label: 'In range today', emoji: '🎯', earned: todayPerfect },
     { label: '7-day streak', emoji: '🔥', earned: streak >= 7 },
     { label: 'Perfect week', emoji: '🏆', earned: perfectWeek },
     { label: 'Level 5', emoji: '⭐', earned: level >= 5 },

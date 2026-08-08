@@ -13,7 +13,10 @@ export default function GoalsSheet() {
 
   if (!show || !gl) return null
 
-  const kcalNow = toNum(gl.kcal) || suggestKcal(gl)
+  const suggestion = suggestKcal(gl)
+  const lo = toNum(gl.kcalMin)
+  const hi = toNum(gl.kcalMax)
+  const kcalNow = lo && hi ? Math.round((lo + hi) / 2) : lo || hi || suggestion
   const derived = deriveMacros(kcalNow, toNum(gl.p))
 
   const statInput = {
@@ -160,7 +163,10 @@ export default function GoalsSheet() {
         >
           <div style={{ font: '600 12px Figtree', color: ink(0.55) }}>Your targets</div>
           <div
-            onClick={() => setGl('kcal', String(suggestKcal(gl)))}
+            onClick={() => {
+              setGl('kcalMin', String(suggestKcal(gl) - 100))
+              setGl('kcalMax', String(suggestKcal(gl) + 100))
+            }}
             style={{
               display: 'flex',
               alignItems: 'center',
@@ -177,18 +183,31 @@ export default function GoalsSheet() {
             ↻ Recalculate ({fmt(suggestKcal(gl))})
           </div>
         </div>
+        <div style={{ font: '600 9.5px Figtree', color: ink(0.55), marginBottom: 4 }}>
+          Daily calorie range (kcal)
+        </div>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 12 }}>
+          <input
+            value={gl.kcalMin}
+            onChange={(e) => setGl('kcalMin', e.target.value)}
+            inputMode="decimal"
+            placeholder="min"
+            style={{ ...macroInput(COLORS.inputBorder), flex: 1 }}
+          />
+          <div style={{ font: '600 12px Figtree', color: ink(0.4), flex: 'none' }}>to</div>
+          <input
+            value={gl.kcalMax}
+            onChange={(e) => setGl('kcalMax', e.target.value)}
+            inputMode="decimal"
+            placeholder="max"
+            style={{ ...macroInput(COLORS.inputBorder), flex: 1 }}
+          />
+        </div>
+        <div style={{ font: '500 10.5px/1.45 Figtree', color: ink(0.5), marginBottom: 12 }}>
+          Aim to land inside this range. Going over counts against your streak, the
+          same as falling short.
+        </div>
         <div style={{ display: 'flex', gap: 8 }}>
-          <div style={{ flex: 1 }}>
-            <div style={{ font: '600 9.5px Figtree', color: ink(0.55), marginBottom: 4 }}>
-              Calorie goal (kcal)
-            </div>
-            <input
-              value={gl.kcal}
-              onChange={(e) => setGl('kcal', e.target.value)}
-              inputMode="decimal"
-              style={macroInput(COLORS.inputBorder)}
-            />
-          </div>
           <div style={{ flex: 1 }}>
             <div style={{ font: '600 9.5px Figtree', color: '#E4572E', marginBottom: 4 }}>
               Protein goal (g)

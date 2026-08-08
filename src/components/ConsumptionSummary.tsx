@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { useStore } from '../store'
 import { ink, MACRO } from '../tokens'
-import { eatenTotals, round, clamp01 } from '../lib/calc'
+import { eatenTotals, round, clamp01, kcalWindow, scoreDay } from '../lib/calc'
 import { todayISO, addDays, weekDates, startOfWeek, weekdayShort, dayOfMonth } from '../lib/dates'
 
 type Range = '7d' | 'week'
@@ -27,10 +27,12 @@ export default function ConsumptionSummary() {
       ? Array.from({ length: 7 }, (_, i) => addDays(today, i - 6)) // oldest → today
       : weekDates(startOfWeek(selDate))
 
-  const rows = dates.map((date) => ({
-    date,
-    ...eatenTotals(foods, meals, mealsByDay[date], eaten[date]),
-  }))
+  const win = kcalWindow(goals)
+  const rows = dates.map((date) => {
+    const totals = eatenTotals(foods, meals, mealsByDay[date], eaten[date])
+    return { date, ...totals, score: scoreDay(totals, goals) }
+  })
+  const daysInRange = rows.filter((r) => r.score.onTarget).length
 
   // Only days with something eaten count toward the average.
   const logged = rows.filter((r) => r.kcal > 0)
@@ -42,7 +44,7 @@ export default function ConsumptionSummary() {
   const avgC = avg((r) => r.c)
   const avgF = avg((r) => r.f)
 
-  const maxKcal = Math.max(goals.kcal || 0, ...rows.map((r) => r.kcal), 1)
+  const maxKcal = Math.max(win.max || 0, ...rows.map((r) => r.kcal), 1)
 
   const tab = (key: Range, label: string) => {
     const on = range === key
@@ -88,8 +90,8 @@ export default function ConsumptionSummary() {
     >
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
         <div style={{ font: '600 12.5px Figtree', color: ink(0.55) }}>What you ate</div>
-        <div style={{ font: '500 10.5px Figtree', color: ink(0.4) }}>
-          {logged.length} {logged.length === 1 ? 'day' : 'days'} logged
+        <div style={{ font: '600 10.5px Figtree', color: ink(0.45) }}>
+          {daysInRange}/{logged.length || 0} in range
         </div>
       </div>
 
@@ -152,7 +154,13 @@ export default function ConsumptionSummary() {
                     style={{
                       height: '100%',
                       width: `${(clamp01(r.kcal / maxKcal) * 100).toFixed(0)}%`,
-                      background: none ? 'transparent' : 'linear-gradient(90deg,#4FB05F,#2E9E5B)',
+                      background: none
+                        ? 'transparent'
+                        : r.score.over
+                          ? '#E4572E'
+                          : r.score.onTarget
+                            ? 'linear-gradient(90deg,#4FB05F,#2E9E5B)'
+                            : '#D9CFA8',
                       borderRadius: 99,
                     }}
                   />
@@ -162,6 +170,10 @@ export default function ConsumptionSummary() {
                     'nothing logged'
                   ) : (
                     <>
+                      {r.score.over && (
+                        <span style={{ color: '#E4572E', fontWeight: 700 }}>over · </span>
+                      )}
+                      {r.score.proteinHit && <span title="protein target hit">★ </span>}
                       <span style={{ color: MACRO.protein.color, fontWeight: 700 }}>{r.p}P</span>
                       {'  '}
                       <span style={{ color: MACRO.carbs.color }}>{r.c}C</span>
@@ -173,7 +185,12 @@ export default function ConsumptionSummary() {
               </div>
 
               <div style={{ width: 46, textAlign: 'right', flex: 'none' }}>
-                <div style={{ font: "700 12px 'Space Grotesk'", color: none ? ink(0.3) : '#1a1a17' }}>
+                <div
+                  style={{
+                    font: "700 12px 'Space Grotesk'",
+                    color: none ? ink(0.3) : r.score.over ? '#E4572E' : '#1a1a17',
+                  }}
+                >
                   {r.kcal}
                 </div>
                 <div style={{ font: '500 8.5px Figtree', color: ink(0.35) }}>kcal</div>

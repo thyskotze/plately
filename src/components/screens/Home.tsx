@@ -1,6 +1,6 @@
 import { useStore } from '../../store'
 import { ink, MACRO } from '../../tokens'
-import { round, fmt, clamp01, dayTotals, eatenTotals } from '../../lib/calc'
+import { round, fmt, clamp01, dayTotals, eatenTotals, kcalWindow, scoreDay } from '../../lib/calc'
 import { Flame, Plus, Share } from '../../icons'
 import { todayISO } from '../../lib/dates'
 import { computeStreak } from '../../lib/streak'
@@ -21,7 +21,7 @@ export default function Home() {
   const openSlots = useStore((s) => s.openSlots)
 
   const today = todayISO()
-  const streak = computeStreak(foods, meals, mealsByDay, eaten, goals.kcal, today)
+  const streak = computeStreak(foods, meals, mealsByDay, eaten, goals, today)
 
   const firstName = name.trim().split(' ')[0] || 'there'
   const initial = (name.trim()[0] || 'P').toUpperCase()
@@ -36,32 +36,38 @@ export default function Home() {
   const eatenToday = eaten[today]
   const planned = dayTotals(foods, meals, mealsByDay[today]) // everything laid out today
   const t = eatenTotals(foods, meals, mealsByDay[today], eatenToday) // only ticked-off meals
-  const left = goals.kcal - t.kcal
+  // The ring fills toward the top of your calorie window — that's the limit
+  // you're staying under, not a score to maximise.
+  const win = kcalWindow(goals)
+  const score = scoreDay(t, goals)
+  const left = win.max - t.kcal
   const off = (total: number, goal: number, dash: number) =>
     (dash * (1 - clamp01(total / goal))).toFixed(1)
-  const calOff = off(t.kcal, goals.kcal, RING_DASH)
-  const calPlannedOff = off(planned.kcal, goals.kcal, RING_DASH)
+  const calOff = off(t.kcal, win.max, RING_DASH)
+  const calPlannedOff = off(planned.kcal, win.max, RING_DASH)
 
-  // Over-limit "watch hand": how far past the goal you've eaten (capped at one loop).
-  const over = goals.kcal > 0 && t.kcal > goals.kcal
-  const overFrac = over ? Math.min((t.kcal - goals.kcal) / goals.kcal, 1) : 0
+  // Over-limit "watch hand": how far past the window you've eaten (capped at one loop).
+  const over = score.over
+  const overFrac = over && win.max > 0 ? Math.min((t.kcal - win.max) / win.max, 1) : 0
   const handRad = ((-90 + 360 * overFrac) * Math.PI) / 180
   const handX = 93 + 70 * Math.cos(handRad)
   const handY = 93 + 70 * Math.sin(handRad)
   const OVER_RED = '#E4572E'
 
   const macros = [
-    { label: 'Protein', val: round(t.p), plan: round(planned.p), goal: goals.protein, ...MACRO.protein },
-    { label: 'Carbs', val: round(t.c), plan: round(planned.c), goal: goals.carbs, ...MACRO.carbs },
-    { label: 'Fat', val: round(t.f), plan: round(planned.f), goal: goals.fat, ...MACRO.fat },
+    // Protein is a floor to reach — beating it is a win, not an overshoot.
+    // Carbs/fat are derived ceilings, so going over those still reads as over.
+    { label: 'Protein', val: round(t.p), plan: round(planned.p), goal: goals.protein, atLeast: true, ...MACRO.protein },
+    { label: 'Carbs', val: round(t.c), plan: round(planned.c), goal: goals.carbs, atLeast: false, ...MACRO.carbs },
+    { label: 'Fat', val: round(t.f), plan: round(planned.f), goal: goals.fat, atLeast: false, ...MACRO.fat },
   ]
 
   const pct = goals.kcal ? round((t.kcal / goals.kcal) * 100) : 0
-  const showWin = pct >= 80
-  const win =
-    pct >= 100
-      ? { headline: 'Goal smashed! 🔥', sub: 'You hit 100% of your daily goal.' }
-      : { headline: 'Almost there! 💪', sub: `You're at ${pct}% of your goal.` }
+  // Only celebrate a day that landed inside the window.
+  const showWin = score.onTarget
+  const winCard = score.proteinHit
+    ? { headline: 'Perfect day! 🎯', sub: `In range and ${round(t.p)} g protein — spot on.` }
+    : { headline: 'In your range 🎯', sub: `${fmt(t.kcal)} kcal — inside ${fmt(win.min)}–${fmt(win.max)}.` }
   const shareToday = () =>
     openShare({
       kind: 'day',
@@ -70,8 +76,8 @@ export default function Home() {
       goalKcal: goals.kcal,
       streak,
       dateLabel,
-      headline: win.headline,
-      sub: win.sub,
+      headline: winCard.headline,
+      sub: winCard.sub,
     })
 
   return (
@@ -182,12 +188,12 @@ export default function Home() {
               {fmt(Math.abs(left))}
             </div>
             <div style={{ font: '600 12px Figtree', color: over ? OVER_RED : ink(0.5), marginTop: 3 }}>
-              {left >= 0 ? 'kcal left' : 'kcal over'}
+              {over ? 'kcal over' : 'kcal left'}
             </div>
             <div style={{ font: '500 10.5px/1.35 Figtree', color: ink(0.4), marginTop: 6, textAlign: 'center' }}>
               {fmt(t.kcal)} eaten
               <br />
-              {fmt(planned.kcal)} planned
+              aim {fmt(win.min)}–{fmt(win.max)}
             </div>
           </div>
         </div>
@@ -253,7 +259,13 @@ export default function Home() {
             <div
               style={{
                 font: "600 10px 'Space Grotesk'",
-                color: m.val > m.goal ? OVER_RED : ink(0.4),
+                color: m.atLeast
+                  ? m.val >= m.goal && m.goal > 0
+                    ? '#2E9E5B'
+                    : ink(0.4)
+                  : m.val > m.goal
+                    ? OVER_RED
+                    : ink(0.4),
               }}
             >
               {m.val} / {m.goal}g
@@ -276,8 +288,8 @@ export default function Home() {
           }}
         >
           <div style={{ flex: 1 }}>
-            <div style={{ font: '700 13.5px Figtree', color: '#1a1a17' }}>{win.headline}</div>
-            <div style={{ font: '500 11px Figtree', color: ink(0.55) }}>{win.sub}</div>
+            <div style={{ font: '700 13.5px Figtree', color: '#1a1a17' }}>{winCard.headline}</div>
+            <div style={{ font: '500 11px Figtree', color: ink(0.55) }}>{winCard.sub}</div>
           </div>
           <div
             onClick={shareToday}
