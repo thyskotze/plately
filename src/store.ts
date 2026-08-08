@@ -215,7 +215,8 @@ export interface AppState extends PersistState, EphemeralState {
   aiNext: () => void
   aiBack: () => void
   setAiText: (v: string) => void
-  aiConfirm: (parsed: Food[]) => void
+  /** Commit an AI import: new foods to add, plus updates to existing foods. */
+  aiConfirm: (adds: Food[], replacements?: { existingId: string; food: Food }[]) => void
   copyAiPrompt: (text: string) => void
   // stats
   setWInput: (v: string) => void
@@ -750,10 +751,21 @@ export const useStore = create<AppState>()(
       aiNext: () => set({ aiStep: 'paste' }),
       aiBack: () => set({ aiStep: 'prompt' }),
       setAiText: (v) => set({ aiText: v }),
-      aiConfirm: (parsed) => {
-        if (!parsed.length) return
-        set((s) => ({ foods: [...parsed, ...s.foods], overlay: 'none' }))
-        get().showToast(`Added ${parsed.length} foods to library`)
+      aiConfirm: (adds, replacements = []) => {
+        if (!adds.length && !replacements.length) return
+        const s = get()
+        // Replacements keep the existing food's id so anything already logged
+        // against it stays intact — only the name/category/macros are updated.
+        const repById = new Map(replacements.map((r) => [r.existingId, r.food]))
+        const foods = s.foods.map((f) => {
+          const r = repById.get(f.id)
+          return r ? { ...f, name: r.name, cat: r.cat, kcal: r.kcal, p: r.p, c: r.c, f: r.f } : f
+        })
+        set({ foods: [...adds, ...foods], overlay: 'none' })
+        const bits: string[] = []
+        if (adds.length) bits.push(`${adds.length} added`)
+        if (replacements.length) bits.push(`${replacements.length} updated`)
+        s.showToast(bits.join(' · '))
       },
       copyAiPrompt: (text) => {
         try {

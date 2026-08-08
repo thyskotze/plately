@@ -242,6 +242,45 @@ export function sparkline(kgs: number[]) {
   }
 }
 
+/**
+ * Words of a food name, lowercased, stripped of punctuation and crudely
+ * singularised so "eggs" matches "egg". Only used for loose duplicate
+ * detection, never for display.
+ */
+const nameWords = (s: string): string[] =>
+  (s || '')
+    .toLowerCase()
+    .replace(/[^a-z0-9 ]/g, ' ')
+    .split(/\s+/)
+    .filter(Boolean)
+    .map((w) => (w.length > 3 && w.endsWith('s') && !w.endsWith('ss') ? w.slice(0, -1) : w))
+
+/**
+ * Find an existing library food that likely means the same thing as `name`, so
+ * an import can warn instead of silently creating a near-duplicate.
+ *
+ * Matches when every word of the shorter name appears in the longer one, so
+ * "Hard boiled egg" matches "Egg" and "Whole milk" matches "Milk", while
+ * "Chicken breast" does NOT match "Chicken thigh" (only one word in common out
+ * of two). Deliberately loose — the user makes the final call in the UI.
+ */
+export function findSimilarFood(foods: Food[], name: string): Food | undefined {
+  const a = new Set(nameWords(name))
+  if (!a.size) return undefined
+  let best: Food | undefined
+  let bestLen = Infinity
+  for (const f of foods) {
+    const b = new Set(nameWords(f.name))
+    if (!b.size) continue
+    const shared = [...a].filter((w) => b.has(w)).length
+    if (shared === Math.min(a.size, b.size) && b.size < bestLen) {
+      best = f
+      bestLen = b.size
+    }
+  }
+  return best
+}
+
 /** Parse the AI bulk-import text. Rules ported verbatim from the prototype. */
 export function parseAi(text: string): Food[] {
   const cats = CATEGORIES as readonly string[]

@@ -46,17 +46,42 @@ export const SEED_WEIGHTS: WeightEntry[] = [
   { label: 'Jul 25', kg: 76.8 },
 ]
 
-export const AI_PROMPT = `You are helping me fill a meal-planning app's food library.
-Return ONLY a list, one food per line, in exactly this format:
+export const AI_PROMPT = `You are filling in a meal-planning app's food library.
+Work through all three steps before you answer.
+
+STEP 1 — Find the values
+For each food give: calories (kcal), protein (g), carbs (g), fat (g),
+all PER 100 g — or per 100 ml for liquids.
+
+If I give you a photo, label or pack text, THAT is the source of truth.
+Use it instead of what you remember about the product, even if they disagree.
+Labels are often per serving, not per 100 g. If so, convert:
+  per_100g = per_serving / serving_size_in_g x 100
+State which serving size you converted from.
+
+STEP 2 — Check your own numbers before answering
+For every food, verify all of these:
+  a) Energy adds up. protein x 4 + carbs x 4 + fat x 9 must land within
+     about 10% of your calorie figure. If it doesn't, you made a mistake —
+     find it and redo the food.
+  b) The values really are per 100 g, not per serving or per pack.
+  c) protein + carbs + fat does not exceed 100 g per 100 g of food.
+  d) The figure matches the exact product/preparation I asked for
+     (raw vs cooked, whole vs skim, with or without oil).
+If a food fails a check, fix it. If you cannot verify it, do NOT guess —
+leave it out of the list and flag it under UNSURE.
+
+STEP 3 — Answer
+Output ONLY the list, one food per line, in exactly this format.
+No header, no bullets, no notes, no units, no ranges:
 
 Name | Category | calories | protein | carbs | fat
 
-Rules:
-- All values are per 100 g (or per 100 ml for liquids).
-- calories in kcal; protein, carbs, fat in grams; numbers only.
-- Category must be one of: Produce, Meat & Fish,
-  Dairy & Eggs, Bakery, Pantry, Frozen, Other.
-- No header row, no bullets, no extra text.
+Category must be one of: Produce, Meat & Fish, Dairy & Eggs,
+Bakery, Pantry, Frozen, Other.
 
-Foods to add: [list your foods here, e.g.
+After the list, if anything was uncertain, add lines like:
+UNSURE: white bread — need the brand or the label photo
+
+Foods to add: [list your foods here, or paste/attach a nutrition label, e.g.
 chicken thigh, jasmine rice, kimchi, olive oil]`
