@@ -52,6 +52,7 @@ export type Overlay =
   | 'mealbuilder'
   | 'slots'
   | 'help'
+  | 'report'
 
 export interface NewFoodDraft {
   name: string
@@ -161,6 +162,8 @@ export interface AppState extends PersistState, EphemeralState {
   openHelp: () => void
   // achievement sharing
   openShare: (card: ShareCard) => void
+  /** Coach report: charts + a daily log, exported as a PDF. */
+  openReport: () => void
   // goals
   openGoals: () => void
   setGl: (k: keyof GoalsDraft, v: string) => void
@@ -329,6 +332,7 @@ export const useStore = create<AppState>()(
       openProfile: () => set({ overlay: 'profile' }),
       openHelp: () => set({ overlay: 'help' }),
       openShare: (card) => set({ overlay: 'share', shareData: card }),
+      openReport: () => set({ overlay: 'report' }),
 
       completeOnboarding: (data) => {
         const gl: GoalsDraft = {
@@ -357,7 +361,7 @@ export const useStore = create<AppState>()(
           },
           // Start with a sensible ±100 kcal window around the suggestion.
           goals: { kcal, kcalMin: kcal - 100, kcalMax: kcal + 100, protein, carbs, fat },
-          weights: [{ label: 'Start', kg: data.weight }],
+          weights: [{ label: 'Start', kg: data.weight, date: todayISO() }],
           weightGoal: Math.round(data.weight),
           onboarded: true,
           seenIntro: true,
@@ -815,7 +819,9 @@ export const useStore = create<AppState>()(
         const s = get()
         const v = toNum(s.wInput)
         if (!v) return
-        set({ weights: [...s.weights, { label: 'Today', kg: v }], wInput: '' })
+        // Stamp the date so period-based views (the coach report's trend) can use it.
+        const label = new Date().toLocaleDateString(undefined, { day: 'numeric', month: 'short' })
+        set({ weights: [...s.weights, { label, kg: v, date: todayISO() }], wInput: '' })
         s.showToast('Weight logged')
       },
 

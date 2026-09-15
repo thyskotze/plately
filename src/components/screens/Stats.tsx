@@ -3,7 +3,7 @@ import { ink } from '../../tokens'
 import { sparkline, eatenTotals, round, scoreDay } from '../../lib/calc'
 import { computeStreak } from '../../lib/streak'
 import { todayISO, weekDates, startOfWeek } from '../../lib/dates'
-import { Flame, Star, Share } from '../../icons'
+import { Flame, Star, Share, ChevronRight } from '../../icons'
 import ConsumptionSummary from '../ConsumptionSummary'
 
 export default function Stats() {
@@ -21,6 +21,7 @@ export default function Stats() {
   const eaten = useStore((s) => s.eaten)
   const goals = useStore((s) => s.goals)
   const openShare = useStore((s) => s.openShare)
+  const openReport = useStore((s) => s.openReport)
 
   const today = todayISO()
   const streak = computeStreak(foods, meals, mealsByDay, eaten, goals, today)
@@ -171,6 +172,43 @@ export default function Stats() {
       </div>
 
       <ConsumptionSummary />
+
+      <div
+        onClick={openReport}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 12,
+          background: '#fff',
+          border: '1px solid #EFE9DD',
+          borderRadius: 18,
+          padding: '13px 14px',
+          marginBottom: 14,
+          cursor: 'pointer',
+        }}
+      >
+        <div
+          style={{
+            width: 38,
+            height: 38,
+            borderRadius: 11,
+            background: '#2E9E5B',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            flex: 'none',
+          }}
+        >
+          <Share size={17} color="#fff" />
+        </div>
+        <div style={{ flex: 1 }}>
+          <div style={{ font: '700 13.5px Figtree', color: '#1a1a17' }}>Coach report (PDF)</div>
+          <div style={{ font: '500 11px Figtree', color: ink(0.55) }}>
+            Charts and a daily log to send your coach or dietitian
+          </div>
+        </div>
+        <ChevronRight />
+      </div>
 
       <div style={{ display: 'flex', gap: 10, marginBottom: 14 }}>
         <div

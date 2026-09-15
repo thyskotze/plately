@@ -107,6 +107,12 @@ export interface Goals {
 export interface WeightEntry {
   label: string
   kg: number
+  /**
+   * Local date the weight was logged. Older entries predate this field (they
+   * were all labelled "Today"), so it's optional and anything dated-by-period
+   * — like the coach report's trend — only uses entries that have it.
+   */
+  date?: string
 }
 
 export type Sex = 'male' | 'female'

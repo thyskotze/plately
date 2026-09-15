@@ -19,6 +19,7 @@ import AiImportSheet from './components/overlays/AiImportSheet'
 import GoalsSheet from './components/overlays/GoalsSheet'
 import ProfileSheet from './components/overlays/ProfileSheet'
 import ShareSheet from './components/overlays/ShareSheet'
+import ReportSheet from './components/overlays/ReportSheet'
 import CnfSearchSheet from './components/overlays/CnfSearchSheet'
 import BarcodeSheet from './components/overlays/BarcodeSheet'
 import MealBuilderSheet from './components/overlays/MealBuilderSheet'
@@ -127,6 +128,7 @@ export default function App() {
           <GoalsSheet />
           <ProfileSheet />
           <ShareSheet />
+          <ReportSheet />
           <CnfSearchSheet />
           <BarcodeSheet />
           <MealBuilderSheet />
