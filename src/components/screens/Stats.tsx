@@ -22,6 +22,8 @@ export default function Stats() {
   const goals = useStore((s) => s.goals)
   const openShare = useStore((s) => s.openShare)
   const openReport = useStore((s) => s.openReport)
+  const openCalc = useStore((s) => s.openCalc)
+  const bioWeight = useStore((s) => s.bio.weight)
 
   const today = todayISO()
   const streak = computeStreak(foods, meals, mealsByDay, eaten, goals, today)
@@ -31,6 +33,8 @@ export default function Stats() {
   const sp = sparkline(hasWeights ? kgs : [0])
   const latestKg = hasWeights ? kgs[kgs.length - 1] : 0
   const totd = hasWeights ? latestKg - kgs[0] : 0
+  // Goals were worked out at bio.weight; after a 2 kg+ change, suggest a rework.
+  const driftKg = hasWeights && bioWeight ? Math.round((latestKg - bioWeight) * 10) / 10 : 0
 
   // Weekly achievement: a day is "perfect" when it lands inside the calorie
   // window — going over doesn't count, same as falling short.
@@ -169,6 +173,31 @@ export default function Stats() {
             Log
           </div>
         </div>
+        {Math.abs(driftKg) >= 2 && (
+          <div
+            onClick={openCalc}
+            style={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+              marginTop: 12,
+              background: '#EAF5EE',
+              border: '1px solid #CDE6D8',
+              borderRadius: 12,
+              padding: '10px 12px',
+              cursor: 'pointer',
+            }}
+          >
+            <span style={{ fontSize: 16 }}>✨</span>
+            <div style={{ flex: 1, font: '500 11px/1.4 Figtree', color: ink(0.7) }}>
+              <b>
+                You've {driftKg < 0 ? 'lost' : 'gained'} {Math.abs(driftKg)} kg
+              </b>{' '}
+              since your goals were set. Rework your calories?
+            </div>
+            <ChevronRight size={15} color="#2E9E5B" />
+          </div>
+        )}
       </div>
 
       <ConsumptionSummary />

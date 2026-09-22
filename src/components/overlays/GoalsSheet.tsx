@@ -10,6 +10,7 @@ export default function GoalsSheet() {
   const setGl = useStore((s) => s.setGl)
   const saveGoals = useStore((s) => s.saveGoals)
   const closeOverlay = useStore((s) => s.closeOverlay)
+  const openCalc = useStore((s) => s.openCalc)
 
   if (!show || !gl) return null
 
@@ -83,8 +84,30 @@ export default function GoalsSheet() {
       <div style={{ font: "700 18px 'Bricolage Grotesque'", color: COLORS.ink, marginBottom: 3 }}>
         Your goals
       </div>
-      <div style={{ font: '500 11.5px Figtree', color: ink(0.5), marginBottom: 16 }}>
-        We suggest a calorie target from your stats — set your calorie and protein goals.
+      <div style={{ font: '500 11.5px Figtree', color: ink(0.5), marginBottom: 12 }}>
+        Set your calorie and protein goals by hand — or let Plately work them out.
+      </div>
+      <div
+        onClick={openCalc}
+        style={{
+          display: 'flex',
+          alignItems: 'center',
+          gap: 10,
+          background: COLORS.green,
+          borderRadius: 14,
+          padding: '12px 14px',
+          marginBottom: 16,
+          cursor: 'pointer',
+        }}
+      >
+        <span style={{ fontSize: 18 }}>✨</span>
+        <div style={{ flex: 1 }}>
+          <div style={{ font: '700 13px Figtree', color: '#fff' }}>Work it out for me</div>
+          <div style={{ font: '500 10.5px Figtree', color: 'rgba(255,255,255,.8)' }}>
+            Lose, keep or gain — using your latest weigh-in
+          </div>
+        </div>
+        <span style={{ color: '#fff', font: '700 16px Figtree' }}>›</span>
       </div>
 
       <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>

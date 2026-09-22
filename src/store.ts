@@ -29,8 +29,10 @@ import {
   toNum,
   frequentPortions,
   kcalWindow,
+  itemMetrics,
 } from './lib/calc'
 import { isUpdateAvailable } from './lib/update'
+import { detectRoutine, routineForDate, fillDay } from './lib/routine'
 import { todayISO, addDays, remapWeekKeys, type ISODate } from './lib/dates'
 import type { ShareCard } from './lib/share'
 
@@ -53,6 +55,8 @@ export type Overlay =
   | 'slots'
   | 'help'
   | 'report'
+  | 'calc'
+  | 'routine'
 
 export interface NewFoodDraft {
   name: string
@@ -92,6 +96,16 @@ export interface PersistState {
   /** Which meal slots the user has ticked as eaten, per date. */
   eaten: Record<ISODate, Partial<Record<SlotKey, boolean>>>
   seenIntro: boolean
+  /** Pre-filling new days with the foods you usually log (see lib/routine). */
+  routine: RoutineSettings
+}
+
+export interface RoutineSettings {
+  enabled: boolean
+  /** Detected routine items the user switched off. */
+  off: string[]
+  /** Days already pre-filled — each day is filled at most once. */
+  filled: Record<ISODate, true>
 }
 
 interface EphemeralState {
@@ -164,6 +178,19 @@ export interface AppState extends PersistState, EphemeralState {
   openShare: (card: ShareCard) => void
   /** Coach report: charts + a daily log, exported as a PDF. */
   openReport: () => void
+  /** "Work it out for me": calculate targets from stats + goal. */
+  openCalc: () => void
+  applyTargets: (
+    plan: { kcal: number; kcalMin: number; kcalMax: number; protein: number; carbs: number; fat: number },
+    bio: Bio,
+    weightGoal?: number,
+  ) => void
+  // routine pre-fill
+  openRoutine: () => void
+  setRoutineEnabled: (on: boolean) => void
+  toggleRoutineItem: (id: string) => void
+  /** Pre-fill a day (today or later, once) with routine items. */
+  prefillDay: (date: ISODate, opts?: { force?: boolean; quiet?: boolean }) => number
   // goals
   openGoals: () => void
   setGl: (k: keyof GoalsDraft, v: string) => void
@@ -264,6 +291,7 @@ const initialPersist: PersistState = {
   shopChecked: {},
   eaten: {},
   seenIntro: false,
+  routine: { enabled: true, off: [], filled: {} },
 }
 
 const initialEphemeral: EphemeralState = {
@@ -333,6 +361,56 @@ export const useStore = create<AppState>()(
       openHelp: () => set({ overlay: 'help' }),
       openShare: (card) => set({ overlay: 'share', shareData: card }),
       openReport: () => set({ overlay: 'report' }),
+      openCalc: () => set({ overlay: 'calc' }),
+      applyTargets: (plan, bio, weightGoal) => {
+        set((s) => ({
+          goals: {
+            kcal: plan.kcal,
+            kcalMin: plan.kcalMin,
+            kcalMax: plan.kcalMax,
+            protein: plan.protein,
+            carbs: plan.carbs,
+            fat: plan.fat,
+          },
+          bio,
+          weightGoal: weightGoal && weightGoal > 0 ? weightGoal : s.weightGoal,
+          overlay: 'none',
+          gl: null,
+        }))
+        get().showToast('Goals updated')
+      },
+
+      openRoutine: () => set({ overlay: 'routine' }),
+      setRoutineEnabled: (on) => set((s) => ({ routine: { ...s.routine, enabled: on } })),
+      toggleRoutineItem: (id) =>
+        set((s) => {
+          const off = s.routine.off.includes(id)
+            ? s.routine.off.filter((x) => x !== id)
+            : [...s.routine.off, id]
+          return { routine: { ...s.routine, off } }
+        }),
+      prefillDay: (date, opts = {}) => {
+        const s = get()
+        const today = todayISO()
+        if (date < today) return 0
+        if (!opts.force && (!s.routine.enabled || s.routine.filled[date])) return 0
+        const items = routineForDate(
+          detectRoutine(s.mealsByDay, s.eaten, s.mealSlots, today),
+          date,
+          s.routine.off,
+        ).filter((it) => !itemMetrics(s.foods, s.meals, it.portion).missing)
+        // Nothing learned yet: leave the day unmarked so it can fill later.
+        if (!items.length) return 0
+        const { day, added } = fillDay(s.mealsByDay[date], items)
+        set({
+          mealsByDay: added ? { ...s.mealsByDay, [date]: day } : s.mealsByDay,
+          routine: { ...s.routine, filled: { ...s.routine.filled, [date]: true } },
+        })
+        if (added && !opts.quiet) {
+          s.showToast(`Pre-filled ${added} usual item${added === 1 ? '' : 's'}`)
+        }
+        return added
+      },
 
       completeOnboarding: (data) => {
         const gl: GoalsDraft = {
@@ -461,7 +539,8 @@ export const useStore = create<AppState>()(
           const { date, slot, idx } = s.editRef
           const d = { ...(mb[date] || {}) } as MealsByDay[string]
           const arr = [...(d[slot] || [])]
-          if (arr[idx]) arr[idx] = { ...arr[idx], grams: s.gVal }
+          // Editing a pre-filled item makes it the user's own (drops `auto`).
+          if (arr[idx]) arr[idx] = { foodId: s.chosenId, grams: s.gVal }
           d[slot] = arr
           mb[date] = d
           set({ mealsByDay: mb, overlay: 'none', editRef: null })
@@ -636,8 +715,15 @@ export const useStore = create<AppState>()(
         s.showToast(`${meal?.name ?? 'Meal'} added  +15 XP`)
       },
 
-      selectDate: (date) => set({ selDate: date }),
-      shiftWeek: (dir) => set((s) => ({ selDate: addDays(s.selDate, 7 * dir) })),
+      selectDate: (date) => {
+        set({ selDate: date })
+        get().prefillDay(date)
+      },
+      shiftWeek: (dir) => {
+        const date = addDays(get().selDate, 7 * dir)
+        set({ selDate: date })
+        get().prefillDay(date)
+      },
       toggleShop: (id) =>
         set((s) => ({ shopChecked: { ...s.shopChecked, [id]: !s.shopChecked[id] } })),
       toggleEaten: (date, slot) =>
@@ -860,6 +946,7 @@ export const useStore = create<AppState>()(
           shopChecked: s.shopChecked,
           eaten: s.eaten,
           seenIntro: s.seenIntro,
+          routine: s.routine,
         }
         const blob = new Blob([JSON.stringify(backup, null, 2)], {
           type: 'application/json',
@@ -981,6 +1068,7 @@ export const useStore = create<AppState>()(
         shopChecked: s.shopChecked,
         eaten: s.eaten,
         seenIntro: s.seenIntro,
+        routine: s.routine,
       }),
     },
   ),

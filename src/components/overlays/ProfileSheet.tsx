@@ -10,6 +10,8 @@ export default function ProfileSheet() {
   const close = useStore((s) => s.closeOverlay)
   const openGoals = useStore((s) => s.openGoals)
   const openSlots = useStore((s) => s.openSlots)
+  const openCalc = useStore((s) => s.openCalc)
+  const openRoutine = useStore((s) => s.openRoutine)
   const openHelp = useStore((s) => s.openHelp)
   const exportBackup = useStore((s) => s.exportBackup)
   const exportLibrary = useStore((s) => s.exportLibrary)
@@ -118,6 +120,18 @@ export default function ProfileSheet() {
           'Your goals',
           'Daily calorie & protein targets',
           openGoals,
+        )}
+        {rowBtn(
+          <span style={{ fontSize: 17 }}>✨</span>,
+          'Work it out for me',
+          'Calories & macros from your goal and latest weight',
+          openCalc,
+        )}
+        {rowBtn(
+          <span style={{ fontSize: 17 }}>☕</span>,
+          'Your usual foods',
+          'Pre-fill each day with what you normally have',
+          openRoutine,
         )}
         {rowBtn(
           <Utensils size={18} color={COLORS.green} />,

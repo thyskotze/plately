@@ -29,6 +29,7 @@ export default function DaySlots({ date, showCheckoff }: { date: ISODate; showCh
         const items = (mealsByDay[date]?.[key] || []).map((it, idx) => ({
           ...itemMetrics(foods, meals, it),
           idx,
+          auto: !!it.auto,
         }))
         const kc = items.reduce((a, b) => a + b.kcal, 0)
         const hasItems = items.length > 0
@@ -130,7 +131,25 @@ export default function DaySlots({ date, showCheckoff }: { date: ISODate; showCh
                   cursor: 'pointer',
                 }}
               >
-                <div style={{ flex: 1, font: '500 12px Figtree', color: ink(0.7) }}>{it.name}</div>
+                <div style={{ flex: 1, font: '500 12px Figtree', color: ink(0.7) }}>
+                  {it.name}
+                  {it.auto && (
+                    <span
+                      title="Pre-filled from your usual foods — edit or remove if today is different"
+                      style={{
+                        marginLeft: 6,
+                        padding: '1px 6px',
+                        borderRadius: 99,
+                        background: '#F3EFE6',
+                        font: '600 9px Figtree',
+                        color: ink(0.45),
+                        verticalAlign: 1,
+                      }}
+                    >
+                      usual
+                    </span>
+                  )}
+                </div>
                 <div style={{ font: '500 11px Figtree', color: ink(0.4) }}>
                   {it.isMeal ? (it.servings === 1 ? '1 serving' : `${it.servings} servings`) : `${it.grams}g`}
                 </div>

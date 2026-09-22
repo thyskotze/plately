@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useStore } from './store'
 import { COLORS } from './tokens'
+import { todayISO } from './lib/dates'
 import TabBar from './components/TabBar'
 import UpdateBanner from './components/UpdateBanner'
 import Intro from './components/Intro'
@@ -20,6 +21,8 @@ import GoalsSheet from './components/overlays/GoalsSheet'
 import ProfileSheet from './components/overlays/ProfileSheet'
 import ShareSheet from './components/overlays/ShareSheet'
 import ReportSheet from './components/overlays/ReportSheet'
+import CalcSheet from './components/overlays/CalcSheet'
+import RoutineSheet from './components/overlays/RoutineSheet'
 import CnfSearchSheet from './components/overlays/CnfSearchSheet'
 import BarcodeSheet from './components/overlays/BarcodeSheet'
 import MealBuilderSheet from './components/overlays/MealBuilderSheet'
@@ -33,23 +36,27 @@ export default function App() {
   const seenIntro = useStore((s) => s.seenIntro)
   const onboarded = useStore((s) => s.onboarded)
   const checkForUpdate = useStore((s) => s.checkForUpdate)
+  const prefillDay = useStore((s) => s.prefillDay)
   // Bumped on foreground so screens re-derive todayISO() after a midnight rollover.
   const [, setDayTick] = useState(0)
 
   // On load + whenever the app returns to the foreground: check for a newer
   // deployed build, and re-render so the current date rolls over (installed
   // PWAs can stay open for days).
+  // Also pre-fill today with the user's usual items (once per day).
   useEffect(() => {
     checkForUpdate()
+    if (onboarded) prefillDay(todayISO())
     const onVisible = () => {
       if (document.visibilityState === 'visible') {
         checkForUpdate()
+        if (useStore.getState().onboarded) prefillDay(todayISO())
         setDayTick((n) => n + 1)
       }
     }
     document.addEventListener('visibilitychange', onVisible)
     return () => document.removeEventListener('visibilitychange', onVisible)
-  }, [checkForUpdate])
+  }, [checkForUpdate, prefillDay, onboarded])
 
   return (
     <div className="app-canvas">
@@ -129,6 +136,8 @@ export default function App() {
           <ProfileSheet />
           <ShareSheet />
           <ReportSheet />
+          <CalcSheet />
+          <RoutineSheet />
           <CnfSearchSheet />
           <BarcodeSheet />
           <MealBuilderSheet />

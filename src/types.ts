@@ -77,8 +77,9 @@ export interface MealItem {
 }
 
 /** A logged portion — either grams of a library food, or servings of a saved meal. */
-export type FoodPortion = { foodId: string; grams: number }
-export type MealPortion = { mealId: string; servings: number }
+/** `auto` = pre-filled from the user's routine (not added by hand). */
+export type FoodPortion = { foodId: string; grams: number; auto?: true }
+export type MealPortion = { mealId: string; servings: number; auto?: true }
 export type Portion = FoodPortion | MealPortion
 
 export const isMealPortion = (p: Portion): p is MealPortion =>
@@ -118,6 +119,8 @@ export interface WeightEntry {
 export type Sex = 'male' | 'female'
 export type Activity = 'sedentary' | 'light' | 'moderate' | 'active'
 export type GoalDir = 'cut' | 'maintain' | 'gain'
+/** How fast to lose/gain: see LOSE_KG_PER_WEEK / GAIN_KG_PER_WEEK in lib/targets. */
+export type Pace = 'gentle' | 'steady' | 'fast'
 
 /** The user's stored body stats + goal direction (drives TDEE + prefills Goals). */
 export interface Bio {
@@ -127,6 +130,8 @@ export interface Bio {
   sex: Sex
   activity: Activity
   goalDir: GoalDir
+  /** Set by "Work it out for me"; older profiles don't have it. */
+  pace?: Pace
 }
 
 /** Draft state for the Goals (TDEE) sheet. Targets tracked: calories + protein. */
